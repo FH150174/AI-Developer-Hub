@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.navigation;
 
+import com.fhaicl.aidevhub.project.ProjectListView;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -19,7 +20,7 @@ public final class MainView extends BorderPane {
     public MainView() {
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
-        pages.put("Projects", createPage("Projects", "集中管理本地开发项目。", "暂无项目"));
+        pages.put("Projects", new ProjectListView());
         pages.put("Git", createPage("Git", "查看项目的 Git 状态。", "暂无 Git 状态"));
         pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
         pages.put("TODO", createPage("TODO", "Track your development tasks."));
