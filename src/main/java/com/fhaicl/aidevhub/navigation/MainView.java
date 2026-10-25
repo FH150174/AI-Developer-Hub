@@ -1,0 +1,65 @@
+package com.fhaicl.aidevhub.navigation;
+
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.Separator;
+import javafx.scene.control.ToolBar;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public final class MainView extends BorderPane {
+
+    public MainView() {
+        Map<String, VBox> pages = new LinkedHashMap<>();
+        pages.put("Projects", createPage("Projects", "Manage your local development projects."));
+        pages.put("Git", createPage("Git", "View Git status for your projects."));
+        pages.put("Dev Notes", createPage("Dev Notes", "Keep notes about your development work."));
+        pages.put("TODO", createPage("TODO", "Track your development tasks."));
+        pages.put("AI Agents", createPage("AI Agents", "Access your AI development assistants."));
+        pages.put("Environment", createPage("Environment", "View your development environment information."));
+        pages.put("Settings", createPage("Settings", "Configure application preferences."));
+
+        ListView<String> navigation = new ListView<>();
+        navigation.getItems().addAll(pages.keySet());
+        navigation.setPrefWidth(200);
+
+        Label currentPage = new Label();
+        setTop(new ToolBar(new Label("AI Developer Hub"), new Separator(), currentPage));
+        setLeft(navigation);
+
+        navigation.getSelectionModel().selectedItemProperty().addListener(
+                (observable, previous, selected) -> {
+                    if (selected != null) {
+                        setCenter(pages.get(selected));
+                        currentPage.setText(selected);
+                    }
+                });
+        navigation.getSelectionModel().selectFirst();
+    }
+
+    private static VBox createPage(String title, String summary) {
+        Label pageTitle = new Label(title);
+        pageTitle.setFont(Font.font(24));
+        Label description = new Label(summary);
+        description.setWrapText(true);
+        Label placeholder = new Label(title + " — Coming soon");
+        placeholder.setWrapText(true);
+        StackPane placeholderArea = new StackPane(placeholder);
+        placeholderArea.setPadding(new Insets(24));
+        placeholderArea.setStyle("-fx-border-color: -fx-box-border; -fx-border-radius: 4;");
+        VBox.setVgrow(placeholderArea, Priority.ALWAYS);
+
+        VBox content = new VBox(12, pageTitle, description, placeholderArea);
+        content.setAlignment(Pos.TOP_LEFT);
+        content.setMinWidth(0);
+        content.setPadding(new Insets(24));
+        return content;
+    }
+}
