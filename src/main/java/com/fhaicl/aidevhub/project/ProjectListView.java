@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
@@ -27,9 +28,12 @@ public final class ProjectListView extends VBox {
     private final ProjectStore store = new ProjectStore(
             Path.of(System.getProperty("user.home"), ".aidevhub", "projects.xml"));
     private final BooleanProperty loadFailed = new SimpleBooleanProperty(false);
+    private final CurrentProject currentProject = new CurrentProject();
+    private final Consumer<Project> onCurrentProjectChanged;
 
-    public ProjectListView() {
+    public ProjectListView(Consumer<Project> onCurrentProjectChanged) {
         super(12);
+        this.onCurrentProjectChanged = java.util.Objects.requireNonNull(onCurrentProjectChanged);
         Label title = new Label("Projects");
         title.setFont(Font.font(24));
         Label description = new Label("集中管理本地开发项目。");
@@ -123,8 +127,19 @@ public final class ProjectListView extends VBox {
             });
         });
 
+        Button selectButton = new Button("设为当前项目");
+        selectButton.disableProperty().bind(
+                table.getSelectionModel().selectedItemProperty().isNull().or(loadFailed));
+        selectButton.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                currentProject.select(selected);
+                onCurrentProjectChanged.accept(currentProject.project());
+            }
+        });
+
         getChildren().addAll(title, description, storageStatus,
-                new HBox(12, addButton, renameButton, removeButton), table);
+                new HBox(12, addButton, renameButton, removeButton, selectButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
@@ -133,6 +148,8 @@ public final class ProjectListView extends VBox {
     private boolean saveChanges(List<Project> before) {
         try {
             store.save(projects.projects());
+            currentProject.synchronize(projects.projects());
+            onCurrentProjectChanged.accept(currentProject.project());
             return true;
         } catch (IOException | SecurityException exception) {
             projects.replaceAll(before);

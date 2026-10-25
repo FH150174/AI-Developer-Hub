@@ -18,9 +18,11 @@ import java.util.Map;
 public final class MainView extends BorderPane {
 
     public MainView() {
+        Label currentProject = new Label("未选择项目");
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
-        pages.put("Projects", new ProjectListView());
+        pages.put("Projects", new ProjectListView(project ->
+                currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name())));
         pages.put("Git", createPage("Git", "查看项目的 Git 状态。", "暂无 Git 状态"));
         pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
         pages.put("TODO", createPage("TODO", "Track your development tasks."));
@@ -33,7 +35,8 @@ public final class MainView extends BorderPane {
         navigation.setPrefWidth(200);
 
         Label currentPage = new Label();
-        setTop(new ToolBar(new Label("AI Developer Hub"), new Separator(), currentPage));
+        setTop(new ToolBar(new Label("AI Developer Hub"), new Separator(), currentPage,
+                new Separator(), currentProject));
         setLeft(navigation);
 
         navigation.getSelectionModel().selectedItemProperty().addListener(
