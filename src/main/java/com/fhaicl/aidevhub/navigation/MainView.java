@@ -19,8 +19,8 @@ public final class MainView extends BorderPane {
     public MainView() {
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
-        pages.put("Projects", createPage("Projects", "Manage your local development projects."));
-        pages.put("Git", createPage("Git", "View Git status for your projects."));
+        pages.put("Projects", createPage("Projects", "集中管理本地开发项目。", "暂无项目"));
+        pages.put("Git", createPage("Git", "查看项目的 Git 状态。", "暂无 Git 状态"));
         pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
         pages.put("TODO", createPage("TODO", "Track your development tasks."));
         pages.put("AI Agents", createPage("AI Agents", "Access your AI development assistants."));
