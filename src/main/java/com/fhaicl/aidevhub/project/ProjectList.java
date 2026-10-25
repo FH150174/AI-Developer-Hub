@@ -23,6 +23,18 @@ public final class ProjectList {
         return projects.remove(project);
     }
 
+    public Project rename(Project project, String name) {
+        Objects.requireNonNull(project, "Project must not be null");
+        String normalizedName = Objects.requireNonNull(name, "Project name must not be null").strip();
+        Project renamed = new Project(normalizedName, project.path());
+        int index = projects.indexOf(project);
+        if (index < 0) {
+            throw new IllegalArgumentException("Project is not in the list");
+        }
+        projects.set(index, renamed);
+        return renamed;
+    }
+
     public List<Project> projects() {
         return List.copyOf(projects);
     }

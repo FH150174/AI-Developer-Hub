@@ -8,6 +8,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -68,7 +69,35 @@ public final class ProjectListView extends VBox {
             }
         });
 
-        getChildren().addAll(title, description, new HBox(12, addButton, removeButton), table);
+        Button renameButton = new Button("修改名称");
+        renameButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        renameButton.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            TextInputDialog dialog = new TextInputDialog(selected.name());
+            dialog.initOwner(getScene().getWindow());
+            dialog.setTitle("修改项目名称");
+            dialog.setHeaderText(null);
+            dialog.setContentText("项目名称：");
+            dialog.showAndWait().ifPresent(name -> {
+                if (name.strip().isEmpty()) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, "项目名称不能为空或仅包含空白字符。");
+                    alert.initOwner(getScene().getWindow());
+                    alert.setTitle("名称无效");
+                    alert.setHeaderText(null);
+                    alert.showAndWait();
+                    return;
+                }
+                Project renamed = projects.rename(selected, name);
+                table.getItems().setAll(projects.projects());
+                table.getSelectionModel().select(renamed);
+            });
+        });
+
+        getChildren().addAll(title, description,
+                new HBox(12, addButton, renameButton, removeButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
