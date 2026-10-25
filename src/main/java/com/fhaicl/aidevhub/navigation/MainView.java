@@ -18,6 +18,7 @@ public final class MainView extends BorderPane {
 
     public MainView() {
         Map<String, VBox> pages = new LinkedHashMap<>();
+        pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
         pages.put("Projects", createPage("Projects", "Manage your local development projects."));
         pages.put("Git", createPage("Git", "View Git status for your projects."));
         pages.put("Dev Notes", createPage("Dev Notes", "Keep notes about your development work."));
@@ -45,11 +46,15 @@ public final class MainView extends BorderPane {
     }
 
     private static VBox createPage(String title, String summary) {
+        return createPage(title, summary, title + " — Coming soon");
+    }
+
+    private static VBox createPage(String title, String summary, String placeholderText) {
         Label pageTitle = new Label(title);
         pageTitle.setFont(Font.font(24));
         Label description = new Label(summary);
         description.setWrapText(true);
-        Label placeholder = new Label(title + " — Coming soon");
+        Label placeholder = new Label(placeholderText);
         placeholder.setWrapText(true);
         StackPane placeholderArea = new StackPane(placeholder);
         placeholderArea.setPadding(new Insets(24));
