@@ -6,6 +6,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Separator;
+import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -21,6 +23,11 @@ public final class AiDeveloperHubApplication extends Application {
         navigation.setPrefWidth(200);
 
         Label pageTitle = new Label();
+        Label currentPage = new Label();
+        currentPage.textProperty().bind(pageTitle.textProperty());
+        ToolBar topBar = new ToolBar(
+                new Label("AI Developer Hub"), new Separator(), currentPage);
+
         Label placeholder = new Label();
         VBox content = new VBox(12, pageTitle, placeholder);
         content.setAlignment(Pos.CENTER);
@@ -36,6 +43,7 @@ public final class AiDeveloperHubApplication extends Application {
         navigation.getSelectionModel().selectFirst();
 
         BorderPane root = new BorderPane();
+        root.setTop(topBar);
         root.setLeft(navigation);
         root.setCenter(content);
         stage.setTitle("AI Developer Hub");
