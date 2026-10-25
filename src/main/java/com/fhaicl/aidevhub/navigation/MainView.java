@@ -21,7 +21,7 @@ public final class MainView extends BorderPane {
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
         pages.put("Projects", createPage("Projects", "Manage your local development projects."));
         pages.put("Git", createPage("Git", "View Git status for your projects."));
-        pages.put("Dev Notes", createPage("Dev Notes", "Keep notes about your development work."));
+        pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
         pages.put("TODO", createPage("TODO", "Track your development tasks."));
         pages.put("AI Agents", createPage("AI Agents", "Access your AI development assistants."));
         pages.put("Environment", createPage("Environment", "View your development environment information."));
