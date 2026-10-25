@@ -23,9 +23,9 @@ public final class MainView extends BorderPane {
         pages.put("Git", createPage("Git", "查看项目的 Git 状态。", "暂无 Git 状态"));
         pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
         pages.put("TODO", createPage("TODO", "Track your development tasks."));
-        pages.put("AI Agents", createPage("AI Agents", "Access your AI development assistants."));
+        pages.put("Agents", createPage("Agents", "集中访问 AI 开发助手。", "暂无 Agent"));
         pages.put("Environment", createPage("Environment", "View your development environment information."));
-        pages.put("Settings", createPage("Settings", "Configure application preferences."));
+        pages.put("Settings", createPage("Settings", "配置应用偏好设置。", "暂无设置项"));
 
         ListView<String> navigation = new ListView<>();
         navigation.getItems().addAll(pages.keySet());
