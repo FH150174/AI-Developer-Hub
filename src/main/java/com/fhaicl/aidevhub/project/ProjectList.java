@@ -38,4 +38,9 @@ public final class ProjectList {
     public List<Project> projects() {
         return List.copyOf(projects);
     }
+
+    void replaceAll(List<Project> saved) {
+        projects.clear();
+        projects.addAll(saved);
+    }
 }

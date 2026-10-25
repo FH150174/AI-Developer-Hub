@@ -16,9 +16,17 @@ import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 
 public final class ProjectListView extends VBox {
     private final ProjectList projects = new ProjectList();
+    private final ProjectStore store = new ProjectStore(
+            Path.of(System.getProperty("user.home"), ".aidevhub", "projects.xml"));
+    private final BooleanProperty loadFailed = new SimpleBooleanProperty(false);
 
     public ProjectListView() {
         super(12);
@@ -29,6 +37,16 @@ public final class ProjectListView extends VBox {
 
         TableView<Project> table = new TableView<>();
         table.setPlaceholder(new Label("暂无项目"));
+        Label storageStatus = new Label();
+        storageStatus.setWrapText(true);
+        try {
+            projects.replaceAll(store.load());
+            table.getItems().setAll(projects.projects());
+        } catch (IOException | SecurityException exception) {
+            loadFailed.set(true);
+            storageStatus.setText("项目列表加载失败，已禁用编辑以保护原文件。请检查用户目录下的 .aidevhub/projects.xml 后重启。原因："
+                    + exception.getMessage());
+        }
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TableColumn<Project, String> nameColumn = new TableColumn<>("项目名称");
@@ -42,6 +60,7 @@ public final class ProjectListView extends VBox {
         VBox.setVgrow(table, Priority.ALWAYS);
 
         Button addButton = new Button("添加项目");
+        addButton.disableProperty().bind(loadFailed);
         addButton.setOnAction(event -> {
             DirectoryChooser chooser = new DirectoryChooser();
             chooser.setTitle("选择本地项目目录");
@@ -49,6 +68,7 @@ public final class ProjectListView extends VBox {
             if (directory == null) {
                 return;
             }
+            List<Project> before = projects.projects();
             if (!projects.add(directory.toPath())) {
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, "该项目路径已在列表中。");
                 alert.initOwner(getScene().getWindow());
@@ -57,20 +77,23 @@ public final class ProjectListView extends VBox {
                 alert.showAndWait();
                 return;
             }
-            table.getItems().setAll(projects.projects());
+            if (saveChanges(before)) {
+                table.getItems().setAll(projects.projects());
+            }
         });
 
         Button removeButton = new Button("删除项目");
-        removeButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        removeButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull().or(loadFailed));
         removeButton.setOnAction(event -> {
             Project selected = table.getSelectionModel().getSelectedItem();
-            if (selected != null && projects.remove(selected)) {
+            List<Project> before = projects.projects();
+            if (selected != null && projects.remove(selected) && saveChanges(before)) {
                 table.getItems().remove(selected);
             }
         });
 
         Button renameButton = new Button("修改名称");
-        renameButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        renameButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull().or(loadFailed));
         renameButton.setOnAction(event -> {
             Project selected = table.getSelectionModel().getSelectedItem();
             if (selected == null) {
@@ -90,16 +113,36 @@ public final class ProjectListView extends VBox {
                     alert.showAndWait();
                     return;
                 }
+                List<Project> before = projects.projects();
                 Project renamed = projects.rename(selected, name);
+                if (!saveChanges(before)) {
+                    return;
+                }
                 table.getItems().setAll(projects.projects());
                 table.getSelectionModel().select(renamed);
             });
         });
 
-        getChildren().addAll(title, description,
+        getChildren().addAll(title, description, storageStatus,
                 new HBox(12, addButton, renameButton, removeButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
+    }
+
+    private boolean saveChanges(List<Project> before) {
+        try {
+            store.save(projects.projects());
+            return true;
+        } catch (IOException | SecurityException exception) {
+            projects.replaceAll(before);
+            Alert alert = new Alert(Alert.AlertType.ERROR,
+                    "项目列表保存失败，本次修改未生效。原因：" + exception.getMessage());
+            alert.initOwner(getScene().getWindow());
+            alert.setTitle("保存失败");
+            alert.setHeaderText(null);
+            alert.showAndWait();
+            return false;
+        }
     }
 }
