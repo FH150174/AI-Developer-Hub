@@ -14,6 +14,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +31,7 @@ public final class ProjectListView extends VBox {
     private final BooleanProperty loadFailed = new SimpleBooleanProperty(false);
     private final CurrentProject currentProject = new CurrentProject();
     private final Consumer<Project> onCurrentProjectChanged;
+    private Path ideaExecutable;
 
     public ProjectListView(Consumer<Project> onCurrentProjectChanged) {
         super(12);
@@ -179,8 +181,41 @@ public final class ProjectListView extends VBox {
             }
         });
 
+        ProjectIdeaOpener ideaOpener = new ProjectIdeaOpener();
+        Button ideaButton = new Button("用 IDEA 打开");
+        ideaButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        ideaButton.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            if (ideaExecutable == null) {
+                FileChooser chooser = new FileChooser();
+                chooser.setTitle("选择 IDEA 启动程序（本次运行内记住）");
+                chooser.getExtensionFilters().add(
+                        new FileChooser.ExtensionFilter("IDEA 启动程序", "idea64.exe", "idea.exe"));
+                File executable = chooser.showOpenDialog(getScene().getWindow());
+                if (executable == null) {
+                    return;
+                }
+                ideaExecutable = executable.toPath();
+            }
+            try {
+                ideaOpener.open(selected, ideaExecutable);
+            } catch (IOException | SecurityException exception) {
+                ideaExecutable = null;
+                Alert alert = new Alert(Alert.AlertType.ERROR,
+                        "无法用 IDEA 打开项目。原因：" + exception.getMessage());
+                alert.initOwner(getScene().getWindow());
+                alert.setTitle("打开失败");
+                alert.setHeaderText(null);
+                alert.showAndWait();
+            }
+        });
+
         getChildren().addAll(title, description, storageStatus,
-                new HBox(12, addButton, renameButton, removeButton, selectButton, openButton, terminalButton), table);
+                new HBox(12, addButton, renameButton, removeButton, selectButton),
+                new HBox(12, openButton, terminalButton, ideaButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
