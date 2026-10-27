@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.function.Consumer;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -32,6 +34,8 @@ public final class ProjectListView extends VBox {
     private final CurrentProject currentProject = new CurrentProject();
     private final Consumer<Project> onCurrentProjectChanged;
     private Path ideaExecutable;
+    private final Map<ProjectEditorOpener.Editor, Path> editorExecutables =
+            new EnumMap<>(ProjectEditorOpener.Editor.class);
 
     public ProjectListView(Consumer<Project> onCurrentProjectChanged) {
         super(12);
@@ -215,10 +219,49 @@ public final class ProjectListView extends VBox {
 
         getChildren().addAll(title, description, storageStatus,
                 new HBox(12, addButton, renameButton, removeButton, selectButton),
-                new HBox(12, openButton, terminalButton, ideaButton), table);
+                new HBox(12, openButton, terminalButton, ideaButton),
+                new HBox(12, createEditorButton(table, ProjectEditorOpener.Editor.VS_CODE),
+                        createEditorButton(table, ProjectEditorOpener.Editor.CURSOR)), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
+    }
+
+    private Button createEditorButton(TableView<Project> table, ProjectEditorOpener.Editor editor) {
+        ProjectEditorOpener opener = new ProjectEditorOpener(editor);
+        Button button = new Button("用 " + editor.displayName() + " 打开");
+        button.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        button.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            Path executable = editorExecutables.get(editor);
+            if (executable == null) {
+                FileChooser chooser = new FileChooser();
+                chooser.setTitle("选择 " + editor.displayName() + " 启动程序（本次运行内记住）");
+                chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
+                        editor.displayName() + " 启动程序", editor.executableName()));
+                File file = chooser.showOpenDialog(getScene().getWindow());
+                if (file == null) {
+                    return;
+                }
+                executable = file.toPath();
+            }
+            try {
+                opener.open(selected, executable);
+                editorExecutables.put(editor, executable);
+            } catch (IOException | SecurityException exception) {
+                editorExecutables.remove(editor);
+                Alert alert = new Alert(Alert.AlertType.ERROR,
+                        "无法用 " + editor.displayName() + " 打开项目。原因：" + exception.getMessage());
+                alert.initOwner(getScene().getWindow());
+                alert.setTitle("打开失败");
+                alert.setHeaderText(null);
+                alert.showAndWait();
+            }
+        });
+        return button;
     }
 
     private boolean saveChanges(List<Project> before) {
