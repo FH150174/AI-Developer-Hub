@@ -1,6 +1,9 @@
 package com.fhaicl.aidevhub.navigation;
 
 import com.fhaicl.aidevhub.project.ProjectListView;
+import com.fhaicl.aidevhub.settings.IdePathSettings;
+import com.fhaicl.aidevhub.settings.IdeSettingsView;
+import java.nio.file.Path;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -18,17 +21,20 @@ import java.util.Map;
 public final class MainView extends BorderPane {
 
     public MainView() {
+        IdePathSettings ideSettings = new IdePathSettings(
+                Path.of(System.getProperty("user.home"), ".aidevhub", "ide-paths.xml"));
+        IdeSettingsView settingsView = new IdeSettingsView(ideSettings);
         Label currentProject = new Label("未选择项目");
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
-        pages.put("Projects", new ProjectListView(project ->
+        pages.put("Projects", new ProjectListView(ideSettings, project ->
                 currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name())));
         pages.put("Git", createPage("Git", "查看项目的 Git 状态。", "暂无 Git 状态"));
         pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
         pages.put("TODO", createPage("TODO", "Track your development tasks."));
         pages.put("Agents", createPage("Agents", "集中访问 AI 开发助手。", "暂无 Agent"));
         pages.put("Environment", createPage("Environment", "View your development environment information."));
-        pages.put("Settings", createPage("Settings", "配置应用偏好设置。", "暂无设置项"));
+        pages.put("Settings", settingsView);
 
         ListView<String> navigation = new ListView<>();
         navigation.getItems().addAll(pages.keySet());

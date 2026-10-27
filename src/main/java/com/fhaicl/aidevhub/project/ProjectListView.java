@@ -14,14 +14,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
-import javafx.stage.FileChooser;
+import com.fhaicl.aidevhub.settings.IdePathSettings;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.EnumMap;
-import java.util.Map;
 import java.util.function.Consumer;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -33,12 +31,11 @@ public final class ProjectListView extends VBox {
     private final BooleanProperty loadFailed = new SimpleBooleanProperty(false);
     private final CurrentProject currentProject = new CurrentProject();
     private final Consumer<Project> onCurrentProjectChanged;
-    private Path ideaExecutable;
-    private final Map<ProjectEditorOpener.Editor, Path> editorExecutables =
-            new EnumMap<>(ProjectEditorOpener.Editor.class);
+    private final IdePathSettings ideSettings;
 
-    public ProjectListView(Consumer<Project> onCurrentProjectChanged) {
+    public ProjectListView(IdePathSettings ideSettings, Consumer<Project> onCurrentProjectChanged) {
         super(12);
+        this.ideSettings = java.util.Objects.requireNonNull(ideSettings);
         this.onCurrentProjectChanged = java.util.Objects.requireNonNull(onCurrentProjectChanged);
         Label title = new Label("Projects");
         title.setFont(Font.font(24));
@@ -193,21 +190,9 @@ public final class ProjectListView extends VBox {
             if (selected == null) {
                 return;
             }
-            if (ideaExecutable == null) {
-                FileChooser chooser = new FileChooser();
-                chooser.setTitle("选择 IDEA 启动程序（本次运行内记住）");
-                chooser.getExtensionFilters().add(
-                        new FileChooser.ExtensionFilter("IDEA 启动程序", "idea64.exe", "idea.exe"));
-                File executable = chooser.showOpenDialog(getScene().getWindow());
-                if (executable == null) {
-                    return;
-                }
-                ideaExecutable = executable.toPath();
-            }
             try {
-                ideaOpener.open(selected, ideaExecutable);
+                ideaOpener.open(selected, ideSettings.requirePath(IdePathSettings.Ide.IDEA));
             } catch (IOException | SecurityException exception) {
-                ideaExecutable = null;
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法用 IDEA 打开项目。原因：" + exception.getMessage());
                 alert.initOwner(getScene().getWindow());
@@ -266,23 +251,11 @@ public final class ProjectListView extends VBox {
             if (selected == null) {
                 return;
             }
-            Path executable = editorExecutables.get(editor);
-            if (executable == null) {
-                FileChooser chooser = new FileChooser();
-                chooser.setTitle("选择 " + editor.displayName() + " 启动程序（本次运行内记住）");
-                chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
-                        editor.displayName() + " 启动程序", editor.executableName()));
-                File file = chooser.showOpenDialog(getScene().getWindow());
-                if (file == null) {
-                    return;
-                }
-                executable = file.toPath();
-            }
+            IdePathSettings.Ide ide = editor == ProjectEditorOpener.Editor.VS_CODE
+                    ? IdePathSettings.Ide.VS_CODE : IdePathSettings.Ide.CURSOR;
             try {
-                opener.open(selected, executable);
-                editorExecutables.put(editor, executable);
+                opener.open(selected, ideSettings.requirePath(ide));
             } catch (IOException | SecurityException exception) {
-                editorExecutables.remove(editor);
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法用 " + editor.displayName() + " 打开项目。原因：" + exception.getMessage());
                 alert.initOwner(getScene().getWindow());
