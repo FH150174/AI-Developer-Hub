@@ -217,8 +217,38 @@ public final class ProjectListView extends VBox {
             }
         });
 
+        ProjectPathChecker pathChecker = new ProjectPathChecker();
+        Button checkPathButton = new Button("检查路径");
+        checkPathButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        checkPathButton.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            Alert alert;
+            try {
+                ProjectPathChecker.Status status = pathChecker.check(selected);
+                String message = switch (status) {
+                    case DIRECTORY -> "项目目录存在。";
+                    case MISSING -> "项目路径不存在，可能已被移动或删除。";
+                    case NOT_DIRECTORY -> "项目路径存在，但不是目录。";
+                };
+                alert = new Alert(status == ProjectPathChecker.Status.DIRECTORY
+                        ? Alert.AlertType.INFORMATION : Alert.AlertType.WARNING,
+                        message + "\n路径：" + selected.path());
+            } catch (IOException | SecurityException exception) {
+                alert = new Alert(Alert.AlertType.ERROR,
+                        "无法检查项目路径，请检查访问权限或磁盘状态。\n路径：" + selected.path()
+                                + "\n原因：" + exception.getMessage());
+            }
+            alert.initOwner(getScene().getWindow());
+            alert.setTitle("路径检查");
+            alert.setHeaderText(null);
+            alert.showAndWait();
+        });
+
         getChildren().addAll(title, description, storageStatus,
-                new HBox(12, addButton, renameButton, removeButton, selectButton),
+                new HBox(12, addButton, renameButton, removeButton, selectButton, checkPathButton),
                 new HBox(12, openButton, terminalButton, ideaButton),
                 new HBox(12, createEditorButton(table, ProjectEditorOpener.Editor.VS_CODE),
                         createEditorButton(table, ProjectEditorOpener.Editor.CURSOR)), table);
