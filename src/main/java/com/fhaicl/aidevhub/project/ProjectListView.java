@@ -138,8 +138,29 @@ public final class ProjectListView extends VBox {
             }
         });
 
+        ProjectDirectoryOpener directoryOpener = new ProjectDirectoryOpener();
+        Button openButton = new Button("打开项目目录");
+        openButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        openButton.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            try {
+                directoryOpener.open(selected);
+            } catch (IOException | SecurityException | UnsupportedOperationException
+                     | IllegalArgumentException exception) {
+                Alert alert = new Alert(Alert.AlertType.ERROR,
+                        "无法打开项目目录。原因：" + exception.getMessage());
+                alert.initOwner(getScene().getWindow());
+                alert.setTitle("打开失败");
+                alert.setHeaderText(null);
+                alert.showAndWait();
+            }
+        });
+
         getChildren().addAll(title, description, storageStatus,
-                new HBox(12, addButton, renameButton, removeButton, selectButton), table);
+                new HBox(12, addButton, renameButton, removeButton, selectButton, openButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
