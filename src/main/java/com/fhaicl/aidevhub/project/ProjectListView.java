@@ -159,8 +159,28 @@ public final class ProjectListView extends VBox {
             }
         });
 
+        ProjectTerminalOpener terminalOpener = new ProjectTerminalOpener();
+        Button terminalButton = new Button("用终端打开");
+        terminalButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        terminalButton.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            try {
+                terminalOpener.open(selected);
+            } catch (IOException | SecurityException exception) {
+                Alert alert = new Alert(Alert.AlertType.ERROR,
+                        "无法打开终端。原因：" + exception.getMessage());
+                alert.initOwner(getScene().getWindow());
+                alert.setTitle("打开失败");
+                alert.setHeaderText(null);
+                alert.showAndWait();
+            }
+        });
+
         getChildren().addAll(title, description, storageStatus,
-                new HBox(12, addButton, renameButton, removeButton, selectButton, openButton), table);
+                new HBox(12, addButton, renameButton, removeButton, selectButton, openButton, terminalButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
