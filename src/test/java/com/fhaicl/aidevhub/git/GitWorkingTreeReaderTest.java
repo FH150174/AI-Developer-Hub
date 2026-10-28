@@ -149,6 +149,29 @@ class GitWorkingTreeReaderTest {
         assertEquals("Untracked", result.files().getFirst().category());
     }
 
+    @Test
+    void countsEachChangedFileOnceAcrossIndexAndWorkingTree() throws Exception {
+        var files = GitWorkingTreeReader.parse("MM both.txt\0MD changed-deleted.txt\0?? untracked.txt\0R  new.txt\0old.txt\0UU conflict.txt\0");
+        assertEquals(5, files.size());
+        assertEquals(1, files.stream().filter(file -> file.path().equals("both.txt")).count());
+        assertEquals(1, files.stream().filter(file -> file.path().equals("new.txt")).count());
+    }
+
+    @Test
+    void actualCountIncludesNestedFilesAndExcludesIgnoredFiles() throws Exception {
+        git(directory, "init");
+        assertEquals(0, reader.readDetails(new Project("project", directory)).files().size());
+        Files.writeString(directory.resolve(".git/info/exclude"), "ignored.txt\n");
+        Files.writeString(directory.resolve("ignored.txt"), "ignored");
+        Path nested = Files.createDirectory(directory.resolve("nested"));
+        Files.writeString(nested.resolve("one.txt"), "one");
+        Files.writeString(nested.resolve("two.txt"), "two");
+        Files.writeString(directory.resolve("three.txt"), "three");
+        assertEquals(3, reader.readDetails(new Project("project", nested)).files().size());
+        Files.delete(directory.resolve("three.txt"));
+        assertEquals(2, reader.readDetails(new Project("project", directory)).files().size());
+    }
+
     private GitWorkingTreeReader.Status read(Path path) throws IOException {
         return reader.read(new Project("project", path));
     }

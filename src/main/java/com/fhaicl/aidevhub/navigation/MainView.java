@@ -3,6 +3,7 @@ package com.fhaicl.aidevhub.navigation;
 import com.fhaicl.aidevhub.project.ProjectListView;
 import com.fhaicl.aidevhub.git.GitInstallationView;
 import com.fhaicl.aidevhub.git.GitBranchView;
+import com.fhaicl.aidevhub.git.GitChangeCountView;
 import com.fhaicl.aidevhub.settings.IdePathSettings;
 import com.fhaicl.aidevhub.settings.IdeSettingsView;
 import java.nio.file.Path;
@@ -28,13 +29,15 @@ public final class MainView extends BorderPane {
         IdeSettingsView settingsView = new IdeSettingsView(ideSettings);
         Label currentProject = new Label("未选择项目");
         GitBranchView branchView = new GitBranchView();
+        GitChangeCountView countView = new GitChangeCountView();
         GitInstallationView gitView = new GitInstallationView();
-        gitView.getChildren().add(2, branchView);
+        gitView.getChildren().addAll(2, java.util.List.of(branchView, countView));
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
         pages.put("Projects", new ProjectListView(ideSettings, project -> {
             currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name());
             branchView.setProject(project);
+            countView.setProject(project);
         }));
         pages.put("Git", gitView);
         pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
@@ -59,6 +62,7 @@ public final class MainView extends BorderPane {
                         currentPage.setText(selected);
                         if (selected.equals("Git")) {
                             branchView.refresh();
+                            countView.refresh();
                         }
                     }
                 });
