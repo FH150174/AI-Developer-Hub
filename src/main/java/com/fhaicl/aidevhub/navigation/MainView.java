@@ -30,6 +30,7 @@ public final class MainView extends BorderPane {
         Label currentProject = new Label("未选择项目");
         GitBranchView branchView = new GitBranchView();
         GitChangeCountView countView = new GitChangeCountView();
+        VBox.setVgrow(countView, Priority.ALWAYS);
         GitInstallationView gitView = new GitInstallationView();
         gitView.getChildren().addAll(2, java.util.List.of(branchView, countView));
         Map<String, VBox> pages = new LinkedHashMap<>();
