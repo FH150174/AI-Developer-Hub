@@ -23,6 +23,6 @@ public final class GitBranchReader {
         if (result.exitCode() == 1) {
             return new Result(Status.DETACHED_HEAD, "");
         }
-        throw new IOException("获取当前分支失败：" + result.output());
+        throw GitException.commandFailed("获取当前分支失败", result);
     }
 }

@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.project;
 
 import com.fhaicl.aidevhub.git.GitRepositoryChecker;
+import com.fhaicl.aidevhub.git.GitException;
 import com.fhaicl.aidevhub.git.GitBranchReader;
 import com.fhaicl.aidevhub.git.GitWorkingTreeReader;
 import javafx.concurrent.Task;
@@ -269,7 +270,7 @@ public final class ProjectListView extends VBox {
             task.setOnFailed(done -> {
                 checkGitButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
                 Alert alert = new Alert(Alert.AlertType.ERROR,
-                        "无法检测 Git 仓库。原因：" + task.getException().getMessage());
+                        "无法检测 Git 仓库。原因：" + GitException.userMessage(task.getException()));
                 alert.initOwner(getScene().getWindow());
                 alert.setTitle("Git 仓库检测失败");
                 alert.setHeaderText(null);
@@ -314,7 +315,7 @@ public final class ProjectListView extends VBox {
             task.setOnFailed(done -> {
                 branchButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
                 Alert alert = new Alert(Alert.AlertType.ERROR,
-                        "无法获取当前分支。原因：" + task.getException().getMessage());
+                        "无法获取当前分支。原因：" + GitException.userMessage(task.getException()));
                 alert.initOwner(getScene().getWindow());
                 alert.setTitle("获取当前分支失败");
                 alert.setHeaderText(null);
@@ -382,7 +383,7 @@ public final class ProjectListView extends VBox {
             task.setOnFailed(done -> {
                 workingTreeButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
                 Alert alert = new Alert(Alert.AlertType.ERROR,
-                        "无法获取 Working Tree 状态。原因：" + task.getException().getMessage());
+                        "无法获取 Working Tree 状态。原因：" + GitException.userMessage(task.getException()));
                 alert.initOwner(getScene().getWindow());
                 alert.setTitle("获取 Working Tree 状态失败");
                 alert.setHeaderText(null);

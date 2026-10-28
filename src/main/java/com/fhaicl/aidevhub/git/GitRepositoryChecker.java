@@ -25,7 +25,7 @@ public final class GitRepositoryChecker {
         if (result.output().strip().startsWith("fatal: not a git repository")) {
             return Status.NOT_REPOSITORY;
         }
-        throw new IOException("Git 仓库检测失败：" + result.output());
+        throw GitException.commandFailed("Git 仓库检测失败", result);
     }
 
 }

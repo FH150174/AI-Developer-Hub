@@ -89,11 +89,34 @@ class GitCommandExecutorTest {
                 () -> new GitCommandExecutor(Duration.ZERO, builder -> null));
     }
 
+    @Test
+    void invalidDirectoryIsReportedBeforeStartingGit() {
+        var executor = new GitCommandExecutor(Duration.ofSeconds(1), builder -> {
+            fail("Must not start Git for missing directory");
+            return null;
+        });
+        GitException failure = assertThrows(GitException.class,
+                () -> executor.execute(directory.resolve("missing"), "status"));
+        assertEquals(GitException.Kind.INVALID_DIRECTORY, failure.kind());
+    }
+
+    @Test
+    void cleanupFailureDoesNotReplaceTimeout() {
+        StubProcess process = new StubProcess(0, true);
+        process.refuseTermination = true;
+        var executor = new GitCommandExecutor(Duration.ofMillis(1), builder -> process);
+        GitException failure = assertThrows(GitException.class, () -> executor.execute("--version"));
+        assertEquals(GitException.Kind.TIMEOUT, failure.kind());
+        assertEquals(1, failure.getSuppressed().length);
+        assertTrue(failure.getSuppressed()[0].getMessage().contains("终止"));
+    }
+
     private static final class StubProcess extends Process {
         private final int code;
         private boolean alive;
         private boolean destroyed;
         private boolean interrupt;
+        private boolean refuseTermination;
 
         StubProcess(int code, boolean alive) {
             this.code = code;
@@ -113,7 +136,7 @@ class GitCommandExecutorTest {
         }
         @Override public int exitValue() { return code; }
         @Override public boolean isAlive() { return alive; }
-        @Override public void destroy() { destroyed = true; alive = false; }
+        @Override public void destroy() { destroyed = true; alive = refuseTermination; }
         @Override public Process destroyForcibly() { destroy(); return this; }
     }
 }

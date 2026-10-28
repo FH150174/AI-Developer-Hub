@@ -37,7 +37,7 @@ public final class GitInstallationView extends VBox {
             task.setOnFailed(done -> {
                 check.setDisable(false);
                 status.setText("Git 当前不可用。请确认已安装 Git 并加入 PATH；修改后请重启应用再检测。\n原因："
-                        + task.getException().getMessage());
+                        + GitException.userMessage(task.getException()));
             });
             Thread thread = new Thread(task, "git-installation-check");
             thread.setDaemon(true);

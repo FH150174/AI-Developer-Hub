@@ -51,44 +51,55 @@ public final class GitCommandExecutor {
         }
         ProcessBuilder builder = new ProcessBuilder(command);
         if (directory != null) {
+            if (!Files.isDirectory(directory)) {
+                throw new GitException(GitException.Kind.INVALID_DIRECTORY,
+                        "项目目录不存在或无法访问，请重新检查项目路径。", null);
+            }
             builder.directory(directory.toAbsolutePath().normalize().toFile());
         }
         // Prevent inherited Git settings from redirecting queries to another repository.
         builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
         builder.environment().put("LC_ALL", "C");
         builder.environment().put("GIT_OPTIONAL_LOCKS", "0");
-        Path output = Files.createTempFile("aidevhub-git-output-", ".txt");
-        try {
-            Path error = Files.createTempFile("aidevhub-git-error-", ".txt");
+        try (TemporaryFile output = new TemporaryFile(Files.createTempFile("aidevhub-git-output-", ".txt"));
+             TemporaryFile error = new TemporaryFile(Files.createTempFile("aidevhub-git-error-", ".txt"))) {
+            builder.redirectOutput(output.path().toFile());
+            builder.redirectError(error.path().toFile());
+            Process process;
             try {
-                builder.redirectOutput(output.toFile());
-                builder.redirectError(error.toFile());
-                Process process;
-                try {
-                    process = starter.start(builder);
-                } catch (IOException exception) {
-                    throw new IOException("无法启动 Git，请确认 Git 已安装、已加入 PATH 且工作目录可访问。", exception);
-                }
-                try {
-                    process.getOutputStream().close();
-                    if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                        throw new IOException("Git 命令执行超时。");
-                    }
-                    // Keep all whitespace and NUL separators needed by porcelain status parsing.
-                    return new Result(process.exitValue(),
-                            Files.readString(output, StandardCharsets.UTF_8),
-                            Files.readString(error, StandardCharsets.UTF_8));
-                } catch (InterruptedException exception) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Git 命令执行已中断。", exception);
-                } finally {
-                    terminate(process);
-                }
-            } finally {
-                Files.deleteIfExists(error);
+                process = starter.start(builder);
+            } catch (IOException exception) {
+                throw new GitException(GitException.Kind.START_FAILED,
+                        "无法启动 Git，请确认 Git 已安装、已加入 PATH 且工作目录可访问。", exception);
             }
-        } finally {
-            Files.deleteIfExists(output);
+            // Resource cleanup failures are suppressed onto the original error instead of replacing it.
+            try (RunningProcess running = new RunningProcess(process)) {
+                process.getOutputStream().close();
+                if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                    throw new GitException(GitException.Kind.TIMEOUT,
+                            "Git 命令执行超时，请稍后重试或检查仓库所在磁盘状态。", null);
+                }
+                return new Result(process.exitValue(),
+                        Files.readString(output.path(), StandardCharsets.UTF_8),
+                        Files.readString(error.path(), StandardCharsets.UTF_8));
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new GitException(GitException.Kind.INTERRUPTED, "Git 查询已中断，可重新执行查询。", exception);
+            }
+        }
+    }
+
+    private record TemporaryFile(Path path) implements AutoCloseable {
+        @Override
+        public void close() throws IOException {
+            Files.deleteIfExists(path);
+        }
+    }
+
+    private record RunningProcess(Process process) implements AutoCloseable {
+        @Override
+        public void close() throws IOException {
+            terminate(process);
         }
     }
 

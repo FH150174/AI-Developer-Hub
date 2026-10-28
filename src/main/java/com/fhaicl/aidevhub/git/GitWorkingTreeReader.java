@@ -47,7 +47,7 @@ public final class GitWorkingTreeReader {
         GitCommandExecutor.Result bare =
                 new GitCommandExecutor().execute(project.path(), "rev-parse", "--is-bare-repository");
         if (bare.exitCode() != 0) {
-            throw new IOException("无法检查工作区类型：" + bare.output());
+            throw GitException.commandFailed("无法检查工作区类型", bare);
         }
         if (bare.stdout().strip().equals("true")) {
             return new Result(Status.NO_WORKING_TREE, List.of());
@@ -57,7 +57,7 @@ public final class GitWorkingTreeReader {
                 "--no-optional-locks", "status", "--porcelain=v1", "-z",
                 "--untracked-files=all", "--ignore-submodules=none");
         if (result.exitCode() != 0) {
-            throw new IOException("获取 Working Tree 状态失败：" + result.output());
+            throw GitException.commandFailed("获取 Working Tree 状态失败", result);
         }
         List<FileChange> files = parse(result.output());
         return new Result(files.isEmpty() ? Status.CLEAN : Status.DIRTY, files);
@@ -69,7 +69,7 @@ public final class GitWorkingTreeReader {
         while (offset < output.length()) {
             int end = output.indexOf('\0', offset);
             if (end < offset + 4 || output.charAt(offset + 2) != ' ') {
-                throw new IOException("Git 文件状态输出格式无效。");
+                throw GitException.invalidOutput();
             }
             String code = output.substring(offset, offset + 2);
             String path = output.substring(offset + 3, end);
@@ -79,7 +79,7 @@ public final class GitWorkingTreeReader {
             if (code.indexOf('R') >= 0 || code.indexOf('C') >= 0) {
                 end = output.indexOf('\0', offset);
                 if (end <= offset) {
-                    throw new IOException("Git 重命名文件状态输出不完整。");
+                    throw GitException.invalidOutput();
                 }
                 originalPath = output.substring(offset, end);
                 offset = end + 1;

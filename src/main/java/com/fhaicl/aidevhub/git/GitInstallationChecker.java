@@ -23,10 +23,10 @@ public final class GitInstallationChecker {
         GitCommandExecutor.Result result = runner.run();
         String output = result.output().strip();
         if (result.exitCode() != 0) {
-            throw new IOException("Git 版本检测失败（退出码 " + result.exitCode() + "）：" + output);
+            throw GitException.commandFailed("Git 版本检测失败", result);
         }
         if (!output.matches("git version [0-9]+\\.[0-9]+[^\\r\\n]*")) {
-            throw new IOException("Git 返回了无法识别的版本信息：" + output);
+            throw GitException.invalidOutput();
         }
         return output;
     }
