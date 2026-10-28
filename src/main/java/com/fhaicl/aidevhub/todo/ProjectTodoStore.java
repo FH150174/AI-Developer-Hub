@@ -33,12 +33,23 @@ public final class ProjectTodoStore {
         try {
             int count = Integer.parseInt(data.getProperty("count"));
             if (!key(project).equals(data.getProperty("project.path")) || count < 0
-                    || data.size() != 2L + count) {
+                    || count > data.size() - 2L) {
                 throw new IllegalArgumentException("Invalid project TODO data");
             }
             List<TodoItem> items = new ArrayList<>();
+            int statusCount = 0;
             for (int i = 0; i < count; i++) {
-                items.add(new TodoItem(data.getProperty(i + ".title")));
+                String completed = data.getProperty(i + ".completed");
+                if (completed != null) {
+                    statusCount++;
+                    if (!completed.equals("true") && !completed.equals("false")) {
+                        throw new IllegalArgumentException("Invalid TODO completion status");
+                    }
+                }
+                items.add(new TodoItem(data.getProperty(i + ".title"), Boolean.parseBoolean(completed)));
+            }
+            if (data.size() != 2L + count + statusCount) {
+                throw new IllegalArgumentException("Unexpected TODO fields");
             }
             return List.copyOf(items);
         } catch (IllegalArgumentException | NullPointerException exception) {
@@ -53,6 +64,7 @@ public final class ProjectTodoStore {
         data.setProperty("count", Integer.toString(snapshot.size()));
         for (int i = 0; i < snapshot.size(); i++) {
             data.setProperty(i + ".title", snapshot.get(i).title());
+            data.setProperty(i + ".completed", Boolean.toString(snapshot.get(i).completed()));
         }
         Path destination = file(project);
         Files.createDirectories(directory);
