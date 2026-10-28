@@ -6,6 +6,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 
 public final class GitLatestCommitView extends VBox {
     private final Label commitLabel = new Label("最近 Commit：—");
@@ -48,7 +49,10 @@ public final class GitLatestCommitView extends VBox {
             activeTask = null;
             commitLabel.setText(switch (task.getValue().status()) {
                 case COMMIT -> "最近 Commit：" + (task.getValue().subject().isEmpty()
-                        ? "（无标题）" : task.getValue().subject());
+                        ? "（无标题）" : task.getValue().subject())
+                        + "\nCommit 作者：" + (task.getValue().author().isEmpty() ? "（未记录）" : task.getValue().author())
+                        + "\nCommit 时间：" + task.getValue().committedAt()
+                                .format(DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss xxx"));
                 case NO_COMMITS -> "最近 Commit：暂无提交。";
                 case NOT_REPOSITORY -> "最近 Commit：不可用，项目目录不是 Git 仓库。";
                 case MISSING -> "最近 Commit：不可用，项目路径不存在。";

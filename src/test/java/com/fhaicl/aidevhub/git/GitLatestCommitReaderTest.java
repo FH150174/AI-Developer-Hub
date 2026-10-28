@@ -32,7 +32,8 @@ class GitLatestCommitReaderTest {
         String parent = commit(directory.resolve(".git"), "first", "");
         String head = commit(directory.resolve(".git"), "feat: 中文 title\n\nbody text", parent);
         byte[] before = Files.readAllBytes(directory.resolve(".git/HEAD"));
-        assertEquals(new GitLatestCommitReader.Result(GitLatestCommitReader.Status.COMMIT, "feat: 中文 title"),
+        assertEquals(new GitLatestCommitReader.Result(GitLatestCommitReader.Status.COMMIT, "feat: 中文 title", "Test",
+                        java.time.OffsetDateTime.parse("2023-11-14T22:13:20Z")),
                 read(directory));
         assertEquals(head + "\n", Files.readString(directory.resolve(".git/HEAD")));
         assertArrayEquals(before, Files.readAllBytes(directory.resolve(".git/HEAD")));
@@ -70,6 +71,45 @@ class GitLatestCommitReaderTest {
         assertEquals(GitLatestCommitReader.Status.NOT_DIRECTORY,
                 read(Files.writeString(directory.resolve("file"), "data")).status());
         assertThrows(NullPointerException.class, () -> reader.read(null));
+    }
+
+    @Test
+    void distinguishesAuthorFromCommitterAndPreservesCommitTimeOffset() throws Exception {
+        git(directory, "init");
+        Path metadata = directory.resolve(".git");
+        String tree = object(metadata, "tree", new byte[0]);
+        String content = "tree " + tree + "\n"
+                + "author 中文 Author <author@example.invalid> 1600000000 -0700\n"
+                + "committer Other Person <committer@example.invalid> 1700000000 +0530\n\nsubject\n";
+        String hash = object(metadata, "commit", content.getBytes(StandardCharsets.UTF_8));
+        Files.writeString(metadata.resolve("HEAD"), hash + "\n");
+        var result = read(directory);
+        assertEquals("中文 Author", result.author());
+        assertEquals(java.time.OffsetDateTime.parse("2023-11-15T03:43:20+05:30"), result.committedAt());
+    }
+
+    @Test
+    void parsesEmptySubjectAndAuthorAndNegativeTimeZone() throws Exception {
+        var result = GitLatestCommitReader.parse("\0\0" + "2023-11-14T15:13:20-07:00\0\n");
+        assertEquals("", result.subject());
+        assertEquals("", result.author());
+        assertEquals(java.time.ZoneOffset.ofHours(-7), result.committedAt().getOffset());
+    }
+
+    @Test
+    void rejectsMissingExtraFieldsAndMalformedTime() {
+        for (String output : new String[] { "subject\0", "s\0a\0invalid\0\n",
+                "s\0a\0" + "2023-11-14T22:13:20Z\0extra\0" }) {
+            assertThrows(GitException.class, () -> GitLatestCommitReader.parse(output));
+        }
+    }
+
+    @Test
+    void absentCommitHasNoAuthorOrTimestamp() throws Exception {
+        git(directory, "init");
+        var result = read(directory);
+        assertEquals("", result.author());
+        assertNull(result.committedAt());
     }
 
     // Disposable loose Git objects avoid add/commit commands and user identity configuration.
