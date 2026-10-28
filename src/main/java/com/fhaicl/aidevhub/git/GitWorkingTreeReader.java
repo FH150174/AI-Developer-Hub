@@ -44,16 +44,16 @@ public final class GitWorkingTreeReader {
         if (repository != GitRepositoryChecker.Status.REPOSITORY) {
             return new Result(Status.valueOf(repository.name()), List.of());
         }
-        GitRepositoryChecker.CommandResult bare =
-                GitRepositoryChecker.execute(project, "rev-parse", "--is-bare-repository");
+        GitCommandExecutor.Result bare =
+                new GitCommandExecutor().execute(project.path(), "rev-parse", "--is-bare-repository");
         if (bare.exitCode() != 0) {
             throw new IOException("无法检查工作区类型：" + bare.output());
         }
-        if (bare.output().equals("true")) {
+        if (bare.stdout().strip().equals("true")) {
             return new Result(Status.NO_WORKING_TREE, List.of());
         }
         // Disable optional index refresh writes; include staged, unstaged and untracked changes.
-        GitRepositoryChecker.CommandResult result = GitRepositoryChecker.executeRaw(project,
+        GitCommandExecutor.Result result = new GitCommandExecutor().execute(project.path(),
                 "--no-optional-locks", "status", "--porcelain=v1", "-z",
                 "--untracked-files=all", "--ignore-submodules=none");
         if (result.exitCode() != 0) {

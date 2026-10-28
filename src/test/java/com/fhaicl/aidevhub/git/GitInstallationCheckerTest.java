@@ -45,6 +45,6 @@ class GitInstallationCheckerTest {
     }
 
     private GitInstallationChecker checker(int exitCode, String output) {
-        return new GitInstallationChecker(() -> new GitRepositoryChecker.CommandResult(exitCode, output));
+        return new GitInstallationChecker(() -> new GitCommandExecutor.Result(exitCode, exitCode == 0 ? output : "", exitCode == 0 ? "" : output));
     }
 }

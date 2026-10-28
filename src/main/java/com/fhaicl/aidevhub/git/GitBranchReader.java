@@ -15,10 +15,10 @@ public final class GitBranchReader {
             return new Result(Status.valueOf(repository.name()), "");
         }
         // symbolic-ref also works before the first commit; exit 1 means detached HEAD.
-        GitRepositoryChecker.CommandResult result =
-                GitRepositoryChecker.execute(project, "symbolic-ref", "--quiet", "HEAD");
+        GitCommandExecutor.Result result =
+                new GitCommandExecutor().execute(project.path(), "symbolic-ref", "--quiet", "HEAD");
         if (result.exitCode() == 0 && result.output().startsWith("refs/heads/")) {
-            return new Result(Status.BRANCH, result.output().substring("refs/heads/".length()));
+            return new Result(Status.BRANCH, result.stdout().strip().substring("refs/heads/".length()));
         }
         if (result.exitCode() == 1) {
             return new Result(Status.DETACHED_HEAD, "");

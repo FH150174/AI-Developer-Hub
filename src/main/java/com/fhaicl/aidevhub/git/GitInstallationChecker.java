@@ -6,13 +6,13 @@ import java.util.Objects;
 public final class GitInstallationChecker {
     @FunctionalInterface
     interface VersionRunner {
-        GitRepositoryChecker.CommandResult run() throws IOException;
+        GitCommandExecutor.Result run() throws IOException;
     }
 
     private final VersionRunner runner;
 
     public GitInstallationChecker() {
-        this(GitRepositoryChecker::executeVersion);
+        this(() -> new GitCommandExecutor().execute("--version"));
     }
 
     GitInstallationChecker(VersionRunner runner) {
@@ -20,7 +20,7 @@ public final class GitInstallationChecker {
     }
 
     public String version() throws IOException {
-        GitRepositoryChecker.CommandResult result = runner.run();
+        GitCommandExecutor.Result result = runner.run();
         String output = result.output().strip();
         if (result.exitCode() != 0) {
             throw new IOException("Git 版本检测失败（退出码 " + result.exitCode() + "）：" + output);
