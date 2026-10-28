@@ -39,6 +39,10 @@ public final class GitRepositoryChecker {
         return new CommandResult(result.exitCode(), result.output().strip());
     }
 
+    static CommandResult executeVersion() throws IOException {
+        return executeRaw(null, "--version");
+    }
+
     static CommandResult executeRaw(Project project, String... arguments) throws IOException {
         Path output = Files.createTempFile("aidevhub-git-check-", ".txt");
         try {
@@ -55,7 +59,9 @@ public final class GitRepositoryChecker {
             command.add("git");
             command.addAll(java.util.List.of(arguments));
             ProcessBuilder builder = new ProcessBuilder(command);
-            builder.directory(project.path().toAbsolutePath().normalize().toFile());
+            if (project != null) {
+                builder.directory(project.path().toAbsolutePath().normalize().toFile());
+            }
             // Inherited Git overrides must not make us inspect another repository.
             builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
             builder.environment().put("LC_ALL", "C");

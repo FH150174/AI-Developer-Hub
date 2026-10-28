@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.navigation;
 
 import com.fhaicl.aidevhub.project.ProjectListView;
+import com.fhaicl.aidevhub.git.GitInstallationView;
 import com.fhaicl.aidevhub.settings.IdePathSettings;
 import com.fhaicl.aidevhub.settings.IdeSettingsView;
 import java.nio.file.Path;
@@ -29,7 +30,7 @@ public final class MainView extends BorderPane {
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
         pages.put("Projects", new ProjectListView(ideSettings, project ->
                 currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name())));
-        pages.put("Git", createPage("Git", "查看项目的 Git 状态。", "暂无 Git 状态"));
+        pages.put("Git", new GitInstallationView());
         pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
         pages.put("TODO", createPage("TODO", "Track your development tasks."));
         pages.put("Agents", createPage("Agents", "集中访问 AI 开发助手。", "暂无 Agent"));
