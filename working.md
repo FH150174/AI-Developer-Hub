@@ -83,6 +83,8 @@ M7：TODO
 - 排序
 - 未完成数量显示到 Dashboard
 
+当前进度hear，TASK-040
+
 M8：Dashboard
 到这里再正式做 Dashboard，因为这时候才有真实数据。
 Dashboard 可以显示：
