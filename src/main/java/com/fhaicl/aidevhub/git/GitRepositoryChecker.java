@@ -35,6 +35,11 @@ public final class GitRepositoryChecker {
     record CommandResult(int exitCode, String output) { }
 
     static CommandResult execute(Project project, String... arguments) throws IOException {
+        CommandResult result = executeRaw(project, arguments);
+        return new CommandResult(result.exitCode(), result.output().strip());
+    }
+
+    static CommandResult executeRaw(Project project, String... arguments) throws IOException {
         Path output = Files.createTempFile("aidevhub-git-check-", ".txt");
         try {
             return executeWithOutput(project, output, arguments);
@@ -67,7 +72,7 @@ public final class GitRepositoryChecker {
                     throw new IOException("Git 仓库检测超时。");
                 }
                 return new CommandResult(process.exitValue(),
-                        Files.readString(process.exitValue() == 0 ? output : error, StandardCharsets.UTF_8).strip());
+                        Files.readString(process.exitValue() == 0 ? output : error, StandardCharsets.UTF_8));
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Git 仓库检测已中断。", exception);

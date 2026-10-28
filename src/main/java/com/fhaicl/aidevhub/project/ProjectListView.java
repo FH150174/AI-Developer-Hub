@@ -334,16 +334,16 @@ public final class ProjectListView extends VBox {
             }
             workingTreeButton.disableProperty().unbind();
             workingTreeButton.setDisable(true);
-            Task<GitWorkingTreeReader.Status> task =
+            Task<GitWorkingTreeReader.Result> task =
                     new Task<>() {
                         @Override
-                        protected GitWorkingTreeReader.Status call() throws IOException {
-                            return new GitWorkingTreeReader().read(selected);
+                        protected GitWorkingTreeReader.Result call() throws IOException {
+                            return new GitWorkingTreeReader().readDetails(selected);
                         }
                     };
             task.setOnSucceeded(done -> {
                 workingTreeButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
-                String message = switch (task.getValue()) {
+                String message = switch (task.getValue().status()) {
                     case CLEAN -> "工作区干净，没有待提交的更改。";
                     case DIRTY -> "工作区存在更改（包含已暂存、未暂存或未跟踪文件）。";
                     case NO_WORKING_TREE -> "这是裸仓库，没有 Working Tree。";
@@ -354,6 +354,28 @@ public final class ProjectListView extends VBox {
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, message + "\n路径：" + selected.path());
                 alert.initOwner(getScene().getWindow());
                 alert.setTitle("Working Tree 状态");
+                if (!task.getValue().files().isEmpty()) {
+                    TableView<GitWorkingTreeReader.FileChange> changes = new TableView<>();
+                    TableColumn<GitWorkingTreeReader.FileChange, String> category = new TableColumn<>("类型");
+                    category.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().category()));
+                    TableColumn<GitWorkingTreeReader.FileChange, String> code = new TableColumn<>("暂存区 / 工作区");
+                    code.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().code()));
+                    TableColumn<GitWorkingTreeReader.FileChange, String> path = new TableColumn<>("仓库相对路径");
+                    path.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().path()));
+                    TableColumn<GitWorkingTreeReader.FileChange, String> original = new TableColumn<>("原路径");
+                    original.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().originalPath()));
+                    changes.getColumns().add(category);
+                    changes.getColumns().add(code);
+                    changes.getColumns().add(path);
+                    changes.getColumns().add(original);
+                    changes.getItems().setAll(task.getValue().files());
+                    changes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+                    changes.setPrefSize(800, 360);
+                    alert.getDialogPane().setContent(new VBox(12,
+                            new Label(message + "\n路径：" + selected.path()),
+                            new Label("状态码：第一位为暂存区，第二位为工作区；? 表示未跟踪。"), changes));
+                    alert.setResizable(true);
+                }
                 alert.setHeaderText(null);
                 alert.showAndWait();
             });
