@@ -13,6 +13,10 @@ public final class ProjectTodoService {
         this.store = Objects.requireNonNull(store);
     }
 
+    public long incompleteCount(Project project) throws IOException {
+        return store.load(project).stream().filter(item -> !item.completed()).count();
+    }
+
     public List<TodoItem> add(Project project, List<TodoItem> expected, String title) throws IOException {
         return add(project, expected, title, TodoItem.Priority.MEDIUM);
     }

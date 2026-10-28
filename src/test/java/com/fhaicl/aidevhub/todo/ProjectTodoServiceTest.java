@@ -168,6 +168,44 @@ class ProjectTodoServiceTest {
         assertThrows(NullPointerException.class, () -> new TodoItem("task", false, null));
     }
 
+    @Test
+    void incompleteCountReflectsAddCompleteReopenAndDelete() throws IOException {
+        var store = new ProjectTodoStore(directory.resolve("todos"));
+        var service = new ProjectTodoService(store);
+        var project = project("one");
+        assertEquals(0, service.incompleteCount(project));
+        var added = service.add(project, List.of(), "first", TodoItem.Priority.HIGH);
+        added = service.add(project, added, "second", TodoItem.Priority.LOW);
+        assertEquals(2, service.incompleteCount(project));
+        var completed = service.setCompleted(project, added, 0, true);
+        assertEquals(1, service.incompleteCount(project));
+        var reopened = service.setCompleted(project, completed, 0, false);
+        assertEquals(2, service.incompleteCount(project));
+        service.delete(project, reopened, 1);
+        assertEquals(1, new ProjectTodoService(new ProjectTodoStore(directory.resolve("todos"))).incompleteCount(project));
+    }
+
+    @Test
+    void countsOnlySelectedProjectIncludingSameTitleTasks() throws IOException {
+        var store = new ProjectTodoStore(directory.resolve("todos"));
+        var service = new ProjectTodoService(store);
+        store.save(project("one"), List.of(new TodoItem("same"), new TodoItem("same"), new TodoItem("done", true)));
+        store.save(project("other"), List.of(new TodoItem("done", true)));
+        assertEquals(2, service.incompleteCount(project("one")));
+        assertEquals(0, service.incompleteCount(project("other")));
+    }
+
+    @Test
+    void countReadFailureDoesNotBecomeZeroOrChangeData() throws IOException {
+        var store = new ProjectTodoStore(directory.resolve("todos"));
+        var service = new ProjectTodoService(store);
+        store.save(project("one"), List.of(new TodoItem("task")));
+        Path file = savedFile();
+        Files.writeString(file, "corrupt xml");
+        assertThrows(IOException.class, () -> service.incompleteCount(project("one")));
+        assertEquals("corrupt xml", Files.readString(file));
+    }
+
     private Project project(String name) { return new Project(name, directory.resolve(name)); }
     private Path savedFile() throws IOException {
         try (var files = Files.list(directory.resolve("todos"))) { return files.findFirst().orElseThrow(); }

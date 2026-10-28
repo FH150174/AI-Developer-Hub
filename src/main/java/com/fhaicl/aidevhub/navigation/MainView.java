@@ -1,6 +1,8 @@
 package com.fhaicl.aidevhub.navigation;
 
 import com.fhaicl.aidevhub.project.ProjectListView;
+import com.fhaicl.aidevhub.dashboard.DashboardView;
+import com.fhaicl.aidevhub.todo.ProjectTodoService;
 import com.fhaicl.aidevhub.todo.ProjectTodoView;
 import com.fhaicl.aidevhub.todo.ProjectTodoStore;
 import com.fhaicl.aidevhub.notes.ProjectLogsView;
@@ -35,8 +37,10 @@ public final class MainView extends BorderPane {
         IdeSettingsView settingsView = new IdeSettingsView(ideSettings);
         ProjectLogsView notesView = new ProjectLogsView(new ProjectLogStore(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "notes")));
-        ProjectTodoView todoView = new ProjectTodoView(new ProjectTodoStore(
-                Path.of(System.getProperty("user.home"), ".aidevhub", "todos")));
+        ProjectTodoStore todoStore = new ProjectTodoStore(
+                Path.of(System.getProperty("user.home"), ".aidevhub", "todos"));
+        ProjectTodoView todoView = new ProjectTodoView(todoStore);
+        DashboardView dashboardView = new DashboardView(new ProjectTodoService(todoStore));
         Label currentProject = new Label("未选择项目");
         GitBranchView branchView = new GitBranchView();
         GitLatestCommitView commitView = new GitLatestCommitView();
@@ -53,7 +57,7 @@ public final class MainView extends BorderPane {
         refreshButton.setOnAction(event -> refreshGit.run());
         gitView.getChildren().addAll(2, java.util.List.of(refreshButton, branchView, commitView, countView));
         Map<String, VBox> pages = new LinkedHashMap<>();
-        pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
+        pages.put("Dashboard", dashboardView);
         pages.put("Projects", new ProjectListView(ideSettings, project -> {
             refreshButton.setDisable(project == null);
             currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name());
@@ -62,6 +66,7 @@ public final class MainView extends BorderPane {
             countView.setProject(project);
             notesView.setProject(project);
             todoView.setProject(project);
+            dashboardView.setProject(project);
         }));
         pages.put("Git", gitView);
         pages.put("Notes", notesView);
@@ -84,7 +89,9 @@ public final class MainView extends BorderPane {
                     if (selected != null) {
                         setCenter(pages.get(selected));
                         currentPage.setText(selected);
-                        if (selected.equals("Git")) {
+                        if (selected.equals("Dashboard")) {
+                            dashboardView.refresh();
+                        } else if (selected.equals("Git")) {
                             refreshGit.run();
                         } else if (selected.equals("Notes")) {
                             notesView.refresh();
