@@ -2,6 +2,7 @@ package com.fhaicl.aidevhub.navigation;
 
 import com.fhaicl.aidevhub.project.ProjectListView;
 import com.fhaicl.aidevhub.git.GitInstallationView;
+import com.fhaicl.aidevhub.git.GitBranchView;
 import com.fhaicl.aidevhub.settings.IdePathSettings;
 import com.fhaicl.aidevhub.settings.IdeSettingsView;
 import java.nio.file.Path;
@@ -26,11 +27,16 @@ public final class MainView extends BorderPane {
                 Path.of(System.getProperty("user.home"), ".aidevhub", "ide-paths.xml"));
         IdeSettingsView settingsView = new IdeSettingsView(ideSettings);
         Label currentProject = new Label("未选择项目");
+        GitBranchView branchView = new GitBranchView();
+        GitInstallationView gitView = new GitInstallationView();
+        gitView.getChildren().add(2, branchView);
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
-        pages.put("Projects", new ProjectListView(ideSettings, project ->
-                currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name())));
-        pages.put("Git", new GitInstallationView());
+        pages.put("Projects", new ProjectListView(ideSettings, project -> {
+            currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name());
+            branchView.setProject(project);
+        }));
+        pages.put("Git", gitView);
         pages.put("Notes", createPage("Notes", "记录开发过程中的笔记。", "暂无笔记"));
         pages.put("TODO", createPage("TODO", "Track your development tasks."));
         pages.put("Agents", createPage("Agents", "集中访问 AI 开发助手。", "暂无 Agent"));
@@ -51,6 +57,9 @@ public final class MainView extends BorderPane {
                     if (selected != null) {
                         setCenter(pages.get(selected));
                         currentPage.setText(selected);
+                        if (selected.equals("Git")) {
+                            branchView.refresh();
+                        }
                     }
                 });
         navigation.getSelectionModel().selectFirst();
