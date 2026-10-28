@@ -22,9 +22,25 @@ public final class GitRepositoryChecker {
         if (pathStatus == ProjectPathChecker.Status.NOT_DIRECTORY) {
             return Status.NOT_DIRECTORY;
         }
+        CommandResult result = execute(project, "rev-parse", "--git-dir");
+        if (result.exitCode() == 0) {
+            return Status.REPOSITORY;
+        }
+        if (result.output().startsWith("fatal: not a git repository")) {
+            return Status.NOT_REPOSITORY;
+        }
+        throw new IOException("Git 仓库检测失败：" + result.output());
+    }
+
+    record CommandResult(int exitCode, String output) { }
+
+    static CommandResult execute(Project project, String... arguments) throws IOException {
         Path output = Files.createTempFile("aidevhub-git-check-", ".txt");
         try {
-            ProcessBuilder builder = new ProcessBuilder("git", "rev-parse", "--git-dir");
+            java.util.List<String> command = new java.util.ArrayList<>();
+            command.add("git");
+            command.addAll(java.util.List.of(arguments));
+            ProcessBuilder builder = new ProcessBuilder(command);
             builder.directory(project.path().toAbsolutePath().normalize().toFile());
             // Inherited Git overrides must not make us inspect another repository.
             builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
@@ -41,14 +57,8 @@ public final class GitRepositoryChecker {
                 if (!process.waitFor(5, TimeUnit.SECONDS)) {
                     throw new IOException("Git 仓库检测超时。");
                 }
-                if (process.exitValue() == 0) {
-                    return Status.REPOSITORY;
-                }
-                String detail = Files.readString(output, StandardCharsets.UTF_8).strip();
-                if (detail.startsWith("fatal: not a git repository")) {
-                    return Status.NOT_REPOSITORY;
-                }
-                throw new IOException("Git 仓库检测失败：" + detail);
+                return new CommandResult(process.exitValue(),
+                        Files.readString(output, StandardCharsets.UTF_8).strip());
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Git 仓库检测已中断。", exception);

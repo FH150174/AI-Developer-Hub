@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.project;
 
 import com.fhaicl.aidevhub.git.GitRepositoryChecker;
+import com.fhaicl.aidevhub.git.GitBranchReader;
 import javafx.concurrent.Task;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Insets;
@@ -278,11 +279,56 @@ public final class ProjectListView extends VBox {
             thread.start();
         });
 
+        Button branchButton = new Button("获取当前分支");
+        branchButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        branchButton.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            branchButton.disableProperty().unbind();
+            branchButton.setDisable(true);
+            Task<GitBranchReader.Result> task =
+                    new Task<>() {
+                        @Override
+                        protected GitBranchReader.Result call() throws IOException {
+                            return new GitBranchReader().read(selected);
+                        }
+                    };
+            task.setOnSucceeded(done -> {
+                branchButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+                String message = switch (task.getValue().status()) {
+                    case BRANCH -> "当前分支：" + task.getValue().branchName();
+                    case DETACHED_HEAD -> "当前处于 detached HEAD（分离头指针）状态，没有当前分支。";
+                    case NOT_REPOSITORY -> "项目目录不是 Git 仓库。";
+                    case MISSING -> "项目路径不存在，可能已被移动或删除。";
+                    case NOT_DIRECTORY -> "项目路径存在，但不是目录。";
+                };
+                Alert alert = new Alert(Alert.AlertType.INFORMATION, message + "\n路径：" + selected.path());
+                alert.initOwner(getScene().getWindow());
+                alert.setTitle("当前分支");
+                alert.setHeaderText(null);
+                alert.showAndWait();
+            });
+            task.setOnFailed(done -> {
+                branchButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+                Alert alert = new Alert(Alert.AlertType.ERROR,
+                        "无法获取当前分支。原因：" + task.getException().getMessage());
+                alert.initOwner(getScene().getWindow());
+                alert.setTitle("获取当前分支失败");
+                alert.setHeaderText(null);
+                alert.showAndWait();
+            });
+            Thread thread = new Thread(task, "git-branch-read");
+            thread.setDaemon(true);
+            thread.start();
+        });
+
         getChildren().addAll(title, description, storageStatus,
                 new HBox(12, addButton, renameButton, removeButton, selectButton, checkPathButton),
                 new HBox(12, openButton, terminalButton, ideaButton, checkGitButton),
                 new HBox(12, createEditorButton(table, ProjectEditorOpener.Editor.VS_CODE),
-                        createEditorButton(table, ProjectEditorOpener.Editor.CURSOR)), table);
+                        createEditorButton(table, ProjectEditorOpener.Editor.CURSOR), branchButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
