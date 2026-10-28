@@ -12,6 +12,8 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TextField;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.HBox;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
@@ -36,6 +38,8 @@ public final class ProjectLogsView extends VBox {
     private final ListView<DevelopmentLog> logs = new ListView<>();
     private final Label logDate = new Label("日期：—");
     private final TextArea content = new TextArea();
+    private final MarkdownPreview preview = new MarkdownPreview();
+    private final TabPane reading = new TabPane();
     private Project project;
     private Task<List<DevelopmentLog>> activeTask;
 
@@ -60,13 +64,21 @@ public final class ProjectLogsView extends VBox {
         content.setEditable(false);
         content.setWrapText(true);
         content.setPromptText("选择日志查看内容");
+        Tab plain = new Tab("普通文本", content);
+        Tab markdown = new Tab("Markdown 预览", preview);
+        reading.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        reading.getTabs().addAll(plain, markdown);
+        reading.getSelectionModel().selectedItemProperty().addListener((observable, before, selected) -> {
+            if (selected == markdown) preview.showMarkdown(content.getText());
+        });
         logs.getSelectionModel().selectedItemProperty().addListener((observable, before, selected) -> {
             content.setText(selected == null ? "" : selected.content());
+            preview.showMarkdown(selected == null ? "" : selected.content());
             logDate.setText(selected == null ? "日期：—"
                     : "日期：" + (selected.date() == null ? "未记录日期" : selected.date().toString()));
         });
         VBox.setVgrow(logs, Priority.ALWAYS);
-        VBox.setVgrow(content, Priority.ALWAYS);
+        VBox.setVgrow(reading, Priority.ALWAYS);
         Button create = new Button("新建日志");
         Button edit = new Button("编辑日志");
         Button delete = new Button("删除日志");
@@ -76,7 +88,7 @@ public final class ProjectLogsView extends VBox {
         create.setOnAction(event -> editLog(true));
         edit.setOnAction(event -> editLog(false));
         delete.setOnAction(event -> deleteLog());
-        getChildren().addAll(title, projectLabel, status, new HBox(12, create, edit, delete), logs, logDate, content);
+        getChildren().addAll(title, projectLabel, status, new HBox(12, create, edit, delete), logs, logDate, reading);
         setProject(null);
     }
 
@@ -95,6 +107,7 @@ public final class ProjectLogsView extends VBox {
         }
         logs.getItems().clear();
         content.clear();
+        preview.showMarkdown("");
         logs.setDisable(project == null);
         status.setText(project == null ? "" : "正在读取项目日志…");
         if (project == null) {
@@ -147,10 +160,19 @@ public final class ProjectLogsView extends VBox {
         TextArea body = new TextArea(original == null ? "" : original.content());
         body.setWrapText(true);
         body.setPrefSize(600, 320);
+        MarkdownPreview draftPreview = new MarkdownPreview();
+        Tab editor = new Tab("普通文本 / Markdown 源码", body);
+        Tab rendered = new Tab("Markdown 预览", draftPreview);
+        TabPane editing = new TabPane(editor, rendered);
+        editing.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        editing.setPrefSize(600, 320);
+        editing.getSelectionModel().selectedItemProperty().addListener((observable, beforeTab, selectedTab) -> {
+            if (selectedTab == rendered) draftPreview.showMarkdown(body.getText());
+        });
         Label error = new Label();
         error.setWrapText(true);
         dialog.getDialogPane().setContent(new VBox(8, new Label("标题（必填）"), title,
-                new Label("日期"), date, new Label("内容"), body, error));
+                new Label("日期"), date, new Label("内容"), editing, error));
         ButtonType save = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(save, ButtonType.CANCEL);
         Button saveButton = (Button) dialog.getDialogPane().lookupButton(save);
