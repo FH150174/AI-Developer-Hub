@@ -91,4 +91,57 @@ class ProjectLogStoreTest {
         assertThrows(IOException.class, () -> store.save(project("project"), List.of()));
         assertEquals("data", Files.readString(file));
     }
+    @Test
+    void persistsDatesIncludingLeapDayAndAllowsEditingDate() throws IOException {
+        var store = new ProjectLogStore(directory.resolve("notes"));
+        var project = project("dated");
+        var date = java.time.LocalDate.of(2024, 2, 29);
+        var created = List.of(new DevelopmentLog("title", "body", date));
+        store.save(project, created);
+        assertEquals(date, new ProjectLogStore(directory.resolve("notes")).load(project).getFirst().date());
+        var next = java.time.LocalDate.of(2025, 1, 1);
+        var service = new ProjectLogService(store);
+        service.edit(project, created, 0, new DevelopmentLog("title", "body", next));
+        assertEquals(next, store.load(project).getFirst().date());
+    }
+
+    @Test
+    void legacyUndatedLogsSurviveMixedSaveWithoutInventedDate() throws IOException {
+        var store = new ProjectLogStore(directory.resolve("notes"));
+        var project = project("legacy");
+        store.save(project, List.of(new DevelopmentLog("legacy", "old content")));
+        var legacy = store.load(project);
+        assertNull(legacy.getFirst().date());
+        var service = new ProjectLogService(store);
+        service.create(project, legacy, new DevelopmentLog("new", "body", java.time.LocalDate.of(2026, 10, 28)));
+        assertNull(store.load(project).getFirst().date());
+        assertEquals("old content", store.load(project).getFirst().content());
+        assertEquals(java.time.LocalDate.of(2026, 10, 28), store.load(project).getLast().date());
+    }
+
+    @Test
+    void malformedStoredDateFailsWithoutChangingFile() throws IOException {
+        Path storage = directory.resolve("notes");
+        var store = new ProjectLogStore(storage);
+        var project = project("dated");
+        store.save(project, List.of(new DevelopmentLog("title", "body", java.time.LocalDate.of(2024, 2, 29))));
+        Path file;
+        try (var files = Files.list(storage)) { file = files.findFirst().orElseThrow(); }
+        String malformed = Files.readString(file).replace("2024-02-29", "2025-02-29");
+        Files.writeString(file, malformed);
+        assertThrows(IOException.class, () -> store.load(project));
+        assertEquals(malformed, Files.readString(file));
+    }
+
+    @Test
+    void detectsDateOnlyExternalChangeAsConflict() throws IOException {
+        var store = new ProjectLogStore(directory.resolve("notes"));
+        var project = project("dated");
+        var original = List.of(new DevelopmentLog("title", "body", java.time.LocalDate.of(2024, 1, 1)));
+        var changed = List.of(new DevelopmentLog("title", "body", java.time.LocalDate.of(2024, 1, 2)));
+        store.save(project, original);
+        store.save(project, changed);
+        assertThrows(IOException.class, () -> new ProjectLogService(store).delete(project, original, 0));
+        assertEquals(changed, store.load(project));
+    }
 }

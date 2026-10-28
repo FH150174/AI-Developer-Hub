@@ -11,6 +11,7 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TextField;
+import javafx.scene.control.DatePicker;
 import javafx.scene.layout.HBox;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
@@ -22,6 +23,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,6 +34,7 @@ public final class ProjectLogsView extends VBox {
     private final Label projectLabel = new Label();
     private final Label status = new Label();
     private final ListView<DevelopmentLog> logs = new ListView<>();
+    private final Label logDate = new Label("日期：—");
     private final TextArea content = new TextArea();
     private Project project;
     private Task<List<DevelopmentLog>> activeTask;
@@ -51,14 +54,17 @@ public final class ProjectLogsView extends VBox {
             @Override
             protected void updateItem(DevelopmentLog log, boolean empty) {
                 super.updateItem(log, empty);
-                setText(empty || log == null ? null : log.title());
+                setText(empty || log == null ? null : (log.date() == null ? "未记录日期" : log.date().toString()) + "  " + log.title());
             }
         });
         content.setEditable(false);
         content.setWrapText(true);
         content.setPromptText("选择日志查看内容");
-        logs.getSelectionModel().selectedItemProperty().addListener((observable, before, selected) ->
-                content.setText(selected == null ? "" : selected.content()));
+        logs.getSelectionModel().selectedItemProperty().addListener((observable, before, selected) -> {
+            content.setText(selected == null ? "" : selected.content());
+            logDate.setText(selected == null ? "日期：—"
+                    : "日期：" + (selected.date() == null ? "未记录日期" : selected.date().toString()));
+        });
         VBox.setVgrow(logs, Priority.ALWAYS);
         VBox.setVgrow(content, Priority.ALWAYS);
         Button create = new Button("新建日志");
@@ -70,7 +76,7 @@ public final class ProjectLogsView extends VBox {
         create.setOnAction(event -> editLog(true));
         edit.setOnAction(event -> editLog(false));
         delete.setOnAction(event -> deleteLog());
-        getChildren().addAll(title, projectLabel, status, new HBox(12, create, edit, delete), logs, content);
+        getChildren().addAll(title, projectLabel, status, new HBox(12, create, edit, delete), logs, logDate, content);
         setProject(null);
     }
 
@@ -135,20 +141,28 @@ public final class ProjectLogsView extends VBox {
         dialog.setHeaderText("项目：" + selectedProject.name());
         dialog.setResizable(true);
         TextField title = new TextField(original == null ? "" : original.title());
+        DatePicker date = new DatePicker(creating ? LocalDate.now() : original.date());
+        date.setEditable(false);
+        date.setPromptText("选择日期");
         TextArea body = new TextArea(original == null ? "" : original.content());
         body.setWrapText(true);
         body.setPrefSize(600, 320);
         Label error = new Label();
         error.setWrapText(true);
         dialog.getDialogPane().setContent(new VBox(8, new Label("标题（必填）"), title,
-                new Label("内容"), body, error));
+                new Label("日期"), date, new Label("内容"), body, error));
         ButtonType save = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(save, ButtonType.CANCEL);
         Button saveButton = (Button) dialog.getDialogPane().lookupButton(save);
         saveButton.disableProperty().bind(title.textProperty().map(String::isBlank));
         saveButton.addEventFilter(ActionEvent.ACTION, event -> {
+            if (creating && date.getValue() == null) {
+                event.consume();
+                error.setText("请选择日志日期。");
+                return;
+            }
             try {
-                DevelopmentLog replacement = new DevelopmentLog(title.getText(), body.getText());
+                DevelopmentLog replacement = new DevelopmentLog(title.getText(), body.getText(), date.getValue());
                 List<DevelopmentLog> updated = creating
                         ? service.create(selectedProject, before, replacement)
                         : service.edit(selectedProject, before, index, replacement);
