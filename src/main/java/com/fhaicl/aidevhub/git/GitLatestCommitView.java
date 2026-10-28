@@ -52,7 +52,8 @@ public final class GitLatestCommitView extends VBox {
                         ? "（无标题）" : task.getValue().subject())
                         + "\nCommit 作者：" + (task.getValue().author().isEmpty() ? "（未记录）" : task.getValue().author())
                         + "\nCommit 时间：" + task.getValue().committedAt()
-                                .format(DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss xxx"));
+                                .format(DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss xxx"))
+                        + "\nHash 简写：" + task.getValue().shortHash();
                 case NO_COMMITS -> "最近 Commit：暂无提交。";
                 case NOT_REPOSITORY -> "最近 Commit：不可用，项目目录不是 Git 仓库。";
                 case MISSING -> "最近 Commit：不可用，项目路径不存在。";

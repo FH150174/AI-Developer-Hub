@@ -32,9 +32,11 @@ class GitLatestCommitReaderTest {
         String parent = commit(directory.resolve(".git"), "first", "");
         String head = commit(directory.resolve(".git"), "feat: 中文 title\n\nbody text", parent);
         byte[] before = Files.readAllBytes(directory.resolve(".git/HEAD"));
+        var actual = read(directory);
+        assertTrue(head.startsWith(actual.shortHash()));
         assertEquals(new GitLatestCommitReader.Result(GitLatestCommitReader.Status.COMMIT, "feat: 中文 title", "Test",
-                        java.time.OffsetDateTime.parse("2023-11-14T22:13:20Z")),
-                read(directory));
+                        java.time.OffsetDateTime.parse("2023-11-14T22:13:20Z"), actual.shortHash()),
+                actual);
         assertEquals(head + "\n", Files.readString(directory.resolve(".git/HEAD")));
         assertArrayEquals(before, Files.readAllBytes(directory.resolve(".git/HEAD")));
         assertFalse(Files.exists(directory.resolve(".git/index")));
@@ -90,7 +92,7 @@ class GitLatestCommitReaderTest {
 
     @Test
     void parsesEmptySubjectAndAuthorAndNegativeTimeZone() throws Exception {
-        var result = GitLatestCommitReader.parse("\0\0" + "2023-11-14T15:13:20-07:00\0\n");
+        var result = GitLatestCommitReader.parse("\0\0" + "2023-11-14T15:13:20-07:00\0abcdef1\0\n");
         assertEquals("", result.subject());
         assertEquals("", result.author());
         assertEquals(java.time.ZoneOffset.ofHours(-7), result.committedAt().getOffset());
@@ -98,7 +100,7 @@ class GitLatestCommitReaderTest {
 
     @Test
     void rejectsMissingExtraFieldsAndMalformedTime() {
-        for (String output : new String[] { "subject\0", "s\0a\0invalid\0\n",
+        for (String output : new String[] { "subject\0", "s\0a\0invalid\0abcdef1\0\n",
                 "s\0a\0" + "2023-11-14T22:13:20Z\0extra\0" }) {
             assertThrows(GitException.class, () -> GitLatestCommitReader.parse(output));
         }
@@ -110,6 +112,27 @@ class GitLatestCommitReaderTest {
         var result = read(directory);
         assertEquals("", result.author());
         assertNull(result.committedAt());
+        assertEquals("", result.shortHash());
+    }
+
+    @Test
+    void usesGitAbbreviationConfigurationAndUpdatesWithHead() throws Exception {
+        git(directory, "init");
+        Path metadata = directory.resolve(".git");
+        Files.writeString(metadata.resolve("config"), "\n[core]\n    abbrev = 12\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        String first = commit(metadata, "first", "");
+        assertEquals(first.substring(0, 12), read(directory).shortHash());
+        String next = commit(metadata, "next", first);
+        assertEquals(next.substring(0, 12), read(directory).shortHash());
+    }
+
+    @Test
+    void rejectsMissingEmptyAndNonHexadecimalHash() {
+        String prefix = "subject\0author\0" + "2023-11-14T22:13:20Z\0";
+        for (String suffix : new String[] { "", "\0\n", "invalid\0\n", "abc\0\n" }) {
+            assertThrows(GitException.class, () -> GitLatestCommitReader.parse(prefix + suffix));
+        }
     }
 
     // Disposable loose Git objects avoid add/commit commands and user identity configuration.
