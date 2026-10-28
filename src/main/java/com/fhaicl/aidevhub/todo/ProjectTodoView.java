@@ -9,6 +9,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.ChoiceDialog;
 import javafx.scene.layout.HBox;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
@@ -30,6 +32,10 @@ public final class ProjectTodoView extends VBox {
     private final Label status = new Label();
     private final Label emptyState = new Label("未选择当前项目");
     private final ListView<TodoItem> items = new ListView<>();
+    private final ComboBox<TodoOrder> order = new ComboBox<>();
+    private final ComboBox<TodoItem.Priority> newPriority = new ComboBox<>();
+    private List<TodoItem> snapshot = List.of();
+    private List<Integer> displayOrder = List.of();
     private Project project;
     private Task<List<TodoItem>> activeTask;
 
@@ -49,7 +55,7 @@ public final class ProjectTodoView extends VBox {
             @Override
             protected void updateItem(TodoItem item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty || item == null ? null : (item.completed() ? "[已完成] " : "[未完成] ") + item.title());
+                setText(empty || item == null ? null : (item.completed() ? "[已完成] " : "[未完成] ") + "[" + item.priority() + "] " + item.title());
             }
         });
         VBox.setVgrow(items, Priority.ALWAYS);
@@ -62,7 +68,18 @@ public final class ProjectTodoView extends VBox {
         add.setOnAction(event -> addItem());
         complete.setOnAction(event -> changeSelected(false));
         delete.setOnAction(event -> changeSelected(true));
-        getChildren().addAll(title, projectLabel, status, new HBox(12, add, complete, delete), items);
+        Button priority = new Button("设置优先级");
+        priority.disableProperty().bind(complete.disableProperty());
+        priority.setOnAction(event -> changePriority());
+        newPriority.getItems().setAll(TodoItem.Priority.values());
+        newPriority.setValue(TodoItem.Priority.MEDIUM);
+        newPriority.disableProperty().bind(ready.not());
+        order.getItems().setAll(TodoOrder.values());
+        order.setValue(TodoOrder.PRIORITY);
+        order.setOnAction(event -> render(snapshot, selectedSourceIndex()));
+        getChildren().addAll(title, projectLabel, status,
+                new HBox(12, new Label("新任务优先级："), newPriority, add, complete, delete, priority),
+                new HBox(12, new Label("排序："), order), items);
         setProject(null);
     }
 
@@ -79,6 +96,8 @@ public final class ProjectTodoView extends VBox {
             activeTask.cancel(true);
             activeTask = null;
         }
+        snapshot = List.of();
+        displayOrder = List.of();
         items.getItems().clear();
         items.setDisable(project == null);
         emptyState.setText(project == null ? "未选择当前项目" : "正在读取项目 TODO…");
@@ -95,7 +114,7 @@ public final class ProjectTodoView extends VBox {
         task.setOnSucceeded(event -> {
             if (activeTask != task) return;
             activeTask = null;
-            items.getItems().setAll(task.getValue());
+            render(task.getValue(), -1);
             ready.set(true);
             emptyState.setText("当前项目暂无 TODO。");
             status.setText("TODO：" + task.getValue().size() + " 项");
@@ -117,7 +136,7 @@ public final class ProjectTodoView extends VBox {
     private void addItem() {
         if (!ready.get()) return;
         Project selected = project;
-        List<TodoItem> before = List.copyOf(items.getItems());
+        List<TodoItem> before = List.copyOf(snapshot);
         TextInputDialog dialog = new TextInputDialog();
         dialog.initOwner(getScene().getWindow());
         dialog.setTitle("添加任务");
@@ -130,7 +149,7 @@ public final class ProjectTodoView extends VBox {
         save.disableProperty().bind(dialog.getEditor().textProperty().map(String::isBlank));
         save.addEventFilter(ActionEvent.ACTION, event -> {
             try {
-                var updated = service.add(selected, before, dialog.getEditor().getText());
+                var updated = service.add(selected, before, dialog.getEditor().getText(), newPriority.getValue());
                 showSaved(updated, updated.size() - 1);
             } catch (IOException | SecurityException exception) {
                 event.consume();
@@ -144,10 +163,10 @@ public final class ProjectTodoView extends VBox {
 
     private void changeSelected(boolean deleting) {
         if (!ready.get()) return;
-        int index = items.getSelectionModel().getSelectedIndex();
+        int index = selectedSourceIndex();
         if (index < 0) return;
         Project selected = project;
-        List<TodoItem> before = List.copyOf(items.getItems());
+        List<TodoItem> before = List.copyOf(snapshot);
         if (deleting) {
             Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
                     "确定删除任务“" + before.get(index).title() + "”？", ButtonType.OK, ButtonType.CANCEL);
@@ -167,9 +186,42 @@ public final class ProjectTodoView extends VBox {
     }
 
     private void showSaved(List<TodoItem> updated, int index) {
-        items.getItems().setAll(updated);
-        if (index >= 0) items.getSelectionModel().select(index);
+        render(updated, index);
         status.setText("TODO 已保存：" + updated.size() + " 项");
+    }
+
+    private int selectedSourceIndex() {
+        int displayed = items.getSelectionModel().getSelectedIndex();
+        return displayed < 0 ? -1 : displayOrder.get(displayed);
+    }
+
+    private void render(List<TodoItem> source, int selectedIndex) {
+        snapshot = List.copyOf(source);
+        displayOrder = order.getValue().indexes(snapshot);
+        items.getItems().setAll(displayOrder.stream().map(snapshot::get).toList());
+        int displayed = displayOrder.indexOf(selectedIndex);
+        if (displayed >= 0) items.getSelectionModel().select(displayed);
+    }
+
+    private void changePriority() {
+        if (!ready.get()) return;
+        int index = selectedSourceIndex();
+        if (index < 0) return;
+        Project selected = project;
+        List<TodoItem> before = List.copyOf(snapshot);
+        ChoiceDialog<TodoItem.Priority> dialog = new ChoiceDialog<>(before.get(index).priority(), TodoItem.Priority.values());
+        dialog.initOwner(getScene().getWindow());
+        dialog.setTitle("设置优先级");
+        dialog.setHeaderText(before.get(index).title());
+        dialog.setContentText("优先级：");
+        dialog.showAndWait().ifPresent(priority -> {
+            try {
+                showSaved(service.setPriority(selected, before, index, priority), index);
+            } catch (IOException | SecurityException exception) {
+                status.setText("优先级保存失败，原列表保持不变。请检查访问权限或重新进入 TODO 加载后再试。");
+                reportFailure(exception);
+            }
+        });
     }
 
     private void reportFailure(Exception exception) {

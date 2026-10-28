@@ -14,14 +14,25 @@ public final class ProjectTodoService {
     }
 
     public List<TodoItem> add(Project project, List<TodoItem> expected, String title) throws IOException {
+        return add(project, expected, title, TodoItem.Priority.MEDIUM);
+    }
+
+    public List<TodoItem> add(Project project, List<TodoItem> expected, String title, TodoItem.Priority priority) throws IOException {
         var updated = new ArrayList<>(expected);
-        updated.add(new TodoItem(title));
+        updated.add(new TodoItem(title, false, priority));
         return save(project, expected, updated);
     }
 
     public List<TodoItem> setCompleted(Project project, List<TodoItem> expected, int index, boolean completed) throws IOException {
         var updated = new ArrayList<>(expected);
-        updated.set(index, new TodoItem(updated.get(index).title(), completed));
+        updated.set(index, new TodoItem(updated.get(index).title(), completed, updated.get(index).priority()));
+        return save(project, expected, updated);
+    }
+
+    public List<TodoItem> setPriority(Project project, List<TodoItem> expected, int index, TodoItem.Priority priority) throws IOException {
+        var updated = new ArrayList<>(expected);
+        TodoItem old = updated.get(index);
+        updated.set(index, new TodoItem(old.title(), old.completed(), priority));
         return save(project, expected, updated);
     }
 

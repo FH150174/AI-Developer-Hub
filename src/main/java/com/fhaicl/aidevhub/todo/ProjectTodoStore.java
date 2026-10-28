@@ -38,6 +38,7 @@ public final class ProjectTodoStore {
             }
             List<TodoItem> items = new ArrayList<>();
             int statusCount = 0;
+            int priorityCount = 0;
             for (int i = 0; i < count; i++) {
                 String completed = data.getProperty(i + ".completed");
                 if (completed != null) {
@@ -46,9 +47,12 @@ public final class ProjectTodoStore {
                         throw new IllegalArgumentException("Invalid TODO completion status");
                     }
                 }
-                items.add(new TodoItem(data.getProperty(i + ".title"), Boolean.parseBoolean(completed)));
+                String priority = data.getProperty(i + ".priority");
+                if (priority != null) priorityCount++;
+                items.add(new TodoItem(data.getProperty(i + ".title"), Boolean.parseBoolean(completed),
+                        priority == null ? TodoItem.Priority.MEDIUM : TodoItem.Priority.valueOf(priority)));
             }
-            if (data.size() != 2L + count + statusCount) {
+            if (data.size() != 2L + count + statusCount + priorityCount) {
                 throw new IllegalArgumentException("Unexpected TODO fields");
             }
             return List.copyOf(items);
@@ -65,6 +69,7 @@ public final class ProjectTodoStore {
         for (int i = 0; i < snapshot.size(); i++) {
             data.setProperty(i + ".title", snapshot.get(i).title());
             data.setProperty(i + ".completed", Boolean.toString(snapshot.get(i).completed()));
+            data.setProperty(i + ".priority", snapshot.get(i).priority().name());
         }
         Path destination = file(project);
         Files.createDirectories(directory);

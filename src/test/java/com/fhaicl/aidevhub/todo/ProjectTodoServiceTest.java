@@ -109,6 +109,65 @@ class ProjectTodoServiceTest {
         assertEquals(List.of(new TodoItem("task")), old);
     }
 
+    @Test
+    void priorityPersistsAndCompletionDoesNotResetIt() throws IOException {
+        var store = new ProjectTodoStore(directory.resolve("todos"));
+        var service = new ProjectTodoService(store);
+        var project = project("one");
+        var added = service.add(project, List.of(), "task", TodoItem.Priority.HIGH);
+        var completed = service.setCompleted(project, added, 0, true);
+        assertEquals(TodoItem.Priority.HIGH, completed.getFirst().priority());
+        service.setPriority(project, completed, 0, TodoItem.Priority.LOW);
+        var restored = new ProjectTodoStore(directory.resolve("todos")).load(project).getFirst();
+        assertEquals(TodoItem.Priority.LOW, restored.priority());
+        assertTrue(restored.completed());
+    }
+
+    @Test
+    void sortedSelectionMapsToCorrectTaskForPriorityCompletionAndDeletion() throws IOException {
+        var store = new ProjectTodoStore(directory.resolve("todos"));
+        var service = new ProjectTodoService(store);
+        var project = project("one");
+        var low = service.add(project, List.of(), "same", TodoItem.Priority.LOW);
+        var both = service.add(project, low, "same", TodoItem.Priority.HIGH);
+        int selected = TodoOrder.PRIORITY.indexes(both).getFirst();
+        assertEquals(1, selected);
+        var completed = service.setCompleted(project, both, selected, true);
+        assertFalse(completed.getFirst().completed());
+        assertTrue(completed.getLast().completed());
+        var changed = service.setPriority(project, completed, selected, TodoItem.Priority.MEDIUM);
+        assertEquals(low, service.delete(project, changed, TodoOrder.PRIORITY.indexes(changed).getFirst()));
+    }
+
+    @Test
+    void legacyPriorityDefaultsToMediumAndInvalidPriorityFails() throws IOException {
+        var store = new ProjectTodoStore(directory.resolve("todos"));
+        var project = project("one");
+        store.save(project, List.of(new TodoItem("legacy")));
+        Path file = savedFile();
+        Properties data = readProperties(file);
+        data.remove("0.priority");
+        try (var output = Files.newOutputStream(file)) { data.storeToXML(output, "legacy"); }
+        assertEquals(TodoItem.Priority.MEDIUM, store.load(project).getFirst().priority());
+        data.setProperty("0.priority", "INVALID");
+        try (var output = Files.newOutputStream(file)) { data.storeToXML(output, "invalid"); }
+        byte[] before = Files.readAllBytes(file);
+        assertThrows(IOException.class, () -> store.load(project));
+        assertArrayEquals(before, Files.readAllBytes(file));
+    }
+
+    @Test
+    void priorityOnlyChangeRejectsStaleSnapshot() throws IOException {
+        var store = new ProjectTodoStore(directory.resolve("todos"));
+        var service = new ProjectTodoService(store);
+        var project = project("one");
+        var old = service.add(project, List.of(), "task");
+        var current = service.setPriority(project, old, 0, TodoItem.Priority.HIGH);
+        assertThrows(IOException.class, () -> service.setPriority(project, old, 0, TodoItem.Priority.LOW));
+        assertEquals(current, store.load(project));
+        assertThrows(NullPointerException.class, () -> new TodoItem("task", false, null));
+    }
+
     private Project project(String name) { return new Project(name, directory.resolve(name)); }
     private Path savedFile() throws IOException {
         try (var files = Files.list(directory.resolve("todos"))) { return files.findFirst().orElseThrow(); }
