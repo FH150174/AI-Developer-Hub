@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Separator;
 import javafx.scene.control.ToolBar;
@@ -34,10 +35,19 @@ public final class MainView extends BorderPane {
         GitChangeCountView countView = new GitChangeCountView();
         VBox.setVgrow(countView, Priority.ALWAYS);
         GitInstallationView gitView = new GitInstallationView();
-        gitView.getChildren().addAll(2, java.util.List.of(branchView, commitView, countView));
+        Runnable refreshGit = () -> {
+            branchView.refresh();
+            commitView.refresh();
+            countView.refresh();
+        };
+        Button refreshButton = new Button("刷新 Git 状态");
+        refreshButton.setDisable(true);
+        refreshButton.setOnAction(event -> refreshGit.run());
+        gitView.getChildren().addAll(2, java.util.List.of(refreshButton, branchView, commitView, countView));
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", createPage("Dashboard", "开发工作概览。", "暂无概览数据"));
         pages.put("Projects", new ProjectListView(ideSettings, project -> {
+            refreshButton.setDisable(project == null);
             currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name());
             branchView.setProject(project);
             commitView.setProject(project);
@@ -65,9 +75,7 @@ public final class MainView extends BorderPane {
                         setCenter(pages.get(selected));
                         currentPage.setText(selected);
                         if (selected.equals("Git")) {
-                            branchView.refresh();
-                            commitView.refresh();
-                            countView.refresh();
+                            refreshGit.run();
                         }
                     }
                 });
