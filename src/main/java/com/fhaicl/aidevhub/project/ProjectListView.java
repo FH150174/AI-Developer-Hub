@@ -2,6 +2,7 @@ package com.fhaicl.aidevhub.project;
 
 import com.fhaicl.aidevhub.git.GitRepositoryChecker;
 import com.fhaicl.aidevhub.git.GitBranchReader;
+import com.fhaicl.aidevhub.git.GitWorkingTreeReader;
 import javafx.concurrent.Task;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Insets;
@@ -324,11 +325,58 @@ public final class ProjectListView extends VBox {
             thread.start();
         });
 
+        Button workingTreeButton = new Button("获取 Working Tree 状态");
+        workingTreeButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        workingTreeButton.setOnAction(event -> {
+            Project selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            workingTreeButton.disableProperty().unbind();
+            workingTreeButton.setDisable(true);
+            Task<GitWorkingTreeReader.Status> task =
+                    new Task<>() {
+                        @Override
+                        protected GitWorkingTreeReader.Status call() throws IOException {
+                            return new GitWorkingTreeReader().read(selected);
+                        }
+                    };
+            task.setOnSucceeded(done -> {
+                workingTreeButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+                String message = switch (task.getValue()) {
+                    case CLEAN -> "工作区干净，没有待提交的更改。";
+                    case DIRTY -> "工作区存在更改（包含已暂存、未暂存或未跟踪文件）。";
+                    case NO_WORKING_TREE -> "这是裸仓库，没有 Working Tree。";
+                    case NOT_REPOSITORY -> "项目目录不是 Git 仓库。";
+                    case MISSING -> "项目路径不存在，可能已被移动或删除。";
+                    case NOT_DIRECTORY -> "项目路径存在，但不是目录。";
+                };
+                Alert alert = new Alert(Alert.AlertType.INFORMATION, message + "\n路径：" + selected.path());
+                alert.initOwner(getScene().getWindow());
+                alert.setTitle("Working Tree 状态");
+                alert.setHeaderText(null);
+                alert.showAndWait();
+            });
+            task.setOnFailed(done -> {
+                workingTreeButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+                Alert alert = new Alert(Alert.AlertType.ERROR,
+                        "无法获取 Working Tree 状态。原因：" + task.getException().getMessage());
+                alert.initOwner(getScene().getWindow());
+                alert.setTitle("获取 Working Tree 状态失败");
+                alert.setHeaderText(null);
+                alert.showAndWait();
+            });
+            Thread thread = new Thread(task, "git-working-tree-read");
+            thread.setDaemon(true);
+            thread.start();
+        });
+
         getChildren().addAll(title, description, storageStatus,
                 new HBox(12, addButton, renameButton, removeButton, selectButton, checkPathButton),
                 new HBox(12, openButton, terminalButton, ideaButton, checkGitButton),
                 new HBox(12, createEditorButton(table, ProjectEditorOpener.Editor.VS_CODE),
-                        createEditorButton(table, ProjectEditorOpener.Editor.CURSOR), branchButton), table);
+                        createEditorButton(table, ProjectEditorOpener.Editor.CURSOR), branchButton),
+                new HBox(12, workingTreeButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));

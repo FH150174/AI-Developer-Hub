@@ -37,6 +37,15 @@ public final class GitRepositoryChecker {
     static CommandResult execute(Project project, String... arguments) throws IOException {
         Path output = Files.createTempFile("aidevhub-git-check-", ".txt");
         try {
+            return executeWithOutput(project, output, arguments);
+        } finally {
+            Files.deleteIfExists(output);
+        }
+    }
+
+    private static CommandResult executeWithOutput(Project project, Path output, String... arguments) throws IOException {
+        Path error = Files.createTempFile("aidevhub-git-error-", ".txt");
+        try {
             java.util.List<String> command = new java.util.ArrayList<>();
             command.add("git");
             command.addAll(java.util.List.of(arguments));
@@ -45,7 +54,7 @@ public final class GitRepositoryChecker {
             // Inherited Git overrides must not make us inspect another repository.
             builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
             builder.environment().put("LC_ALL", "C");
-            builder.redirectErrorStream(true);
+            builder.redirectError(error.toFile());
             builder.redirectOutput(output.toFile());
             Process process;
             try {
@@ -58,7 +67,7 @@ public final class GitRepositoryChecker {
                     throw new IOException("Git 仓库检测超时。");
                 }
                 return new CommandResult(process.exitValue(),
-                        Files.readString(output, StandardCharsets.UTF_8).strip());
+                        Files.readString(process.exitValue() == 0 ? output : error, StandardCharsets.UTF_8).strip());
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Git 仓库检测已中断。", exception);
@@ -68,7 +77,7 @@ public final class GitRepositoryChecker {
                 }
             }
         } finally {
-            Files.deleteIfExists(output);
+            Files.deleteIfExists(error);
         }
     }
 }
