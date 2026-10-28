@@ -1,6 +1,8 @@
 package com.fhaicl.aidevhub.navigation;
 
 import com.fhaicl.aidevhub.project.ProjectListView;
+import com.fhaicl.aidevhub.todo.ProjectTodoView;
+import com.fhaicl.aidevhub.todo.ProjectTodoStore;
 import com.fhaicl.aidevhub.notes.ProjectLogsView;
 import com.fhaicl.aidevhub.notes.ProjectLogStore;
 import com.fhaicl.aidevhub.git.GitInstallationView;
@@ -33,6 +35,8 @@ public final class MainView extends BorderPane {
         IdeSettingsView settingsView = new IdeSettingsView(ideSettings);
         ProjectLogsView notesView = new ProjectLogsView(new ProjectLogStore(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "notes")));
+        ProjectTodoView todoView = new ProjectTodoView(new ProjectTodoStore(
+                Path.of(System.getProperty("user.home"), ".aidevhub", "todos")));
         Label currentProject = new Label("未选择项目");
         GitBranchView branchView = new GitBranchView();
         GitLatestCommitView commitView = new GitLatestCommitView();
@@ -57,10 +61,11 @@ public final class MainView extends BorderPane {
             commitView.setProject(project);
             countView.setProject(project);
             notesView.setProject(project);
+            todoView.setProject(project);
         }));
         pages.put("Git", gitView);
         pages.put("Notes", notesView);
-        pages.put("TODO", createPage("TODO", "Track your development tasks."));
+        pages.put("TODO", todoView);
         pages.put("Agents", createPage("Agents", "集中访问 AI 开发助手。", "暂无 Agent"));
         pages.put("Environment", createPage("Environment", "View your development environment information."));
         pages.put("Settings", settingsView);
@@ -83,6 +88,8 @@ public final class MainView extends BorderPane {
                             refreshGit.run();
                         } else if (selected.equals("Notes")) {
                             notesView.refresh();
+                        } else if (selected.equals("TODO")) {
+                            todoView.refresh();
                         }
                     }
                 });
