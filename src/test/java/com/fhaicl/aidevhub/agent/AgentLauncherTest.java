@@ -128,4 +128,34 @@ class AgentLauncherTest {
         assertEquals("other", started.get().environment().get("AIDEVHUB_PROJECT_NAME"));
         assertFalse(started.get().environment().get("AIDEVHUB_PROJECT_CONTEXT").contains(name));
     }
+
+    @Test
+    void configuredExecutableOverridesPathAndSavedChangesApplyImmediately() throws IOException {
+        var settings = new AgentPathSettings(directory.resolve("settings/agent-paths.xml"));
+        settings.load();
+        Path install = Files.createDirectories(directory.resolve("中文 tools space"));
+        Path executable = Files.createFile(install.resolve("codex.cmd"));
+        settings.save(java.util.Map.of(AgentLauncher.Tool.CODEX, executable.toString()));
+        AtomicReference<ProcessBuilder> started = new AtomicReference<>();
+        var launcher = new AgentLauncher("Windows 11", "", path -> false, started::set, settings);
+        launcher.launch(AgentLauncher.Tool.CODEX, new Project("project", directory));
+        assertTrue(started.get().command().contains("\"" + executable + "\""));
+        assertTrue(started.get().environment().containsKey("AIDEVHUB_PROJECT_CONTEXT"));
+        settings.save(java.util.Map.of());
+        assertThrows(IOException.class, () -> launcher.launch(AgentLauncher.Tool.CODEX, new Project("project", directory)));
+    }
+
+    @Test
+    void staleConfigurationFailsRatherThanUsingAnotherPathExecutable() throws IOException {
+        var settings = new AgentPathSettings(directory.resolve("agent-paths.xml"));
+        settings.load();
+        Path executable = Files.createFile(directory.resolve("claude.exe"));
+        settings.save(java.util.Map.of(AgentLauncher.Tool.CLAUDE, executable.toString()));
+        Files.delete(executable);
+        var launcher = new AgentLauncher("Windows 11", directory.toString(), path -> true,
+                builder -> fail("Must not launch stale configuration"), settings);
+        assertTrue(assertThrows(IOException.class,
+                () -> launcher.launch(AgentLauncher.Tool.CLAUDE, new Project("project", directory)))
+                .getMessage().contains("配置路径"));
+    }
 }

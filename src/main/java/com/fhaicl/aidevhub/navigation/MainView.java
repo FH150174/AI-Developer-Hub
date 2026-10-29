@@ -2,6 +2,8 @@ package com.fhaicl.aidevhub.navigation;
 
 import com.fhaicl.aidevhub.project.ProjectListView;
 import com.fhaicl.aidevhub.agent.AgentsView;
+import com.fhaicl.aidevhub.agent.AgentPathSettings;
+import com.fhaicl.aidevhub.agent.AgentSettingsView;
 import com.fhaicl.aidevhub.environment.EnvironmentView;
 import com.fhaicl.aidevhub.dashboard.DashboardView;
 import com.fhaicl.aidevhub.todo.ProjectTodoService;
@@ -37,6 +39,9 @@ public final class MainView extends BorderPane {
         IdePathSettings ideSettings = new IdePathSettings(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "ide-paths.xml"));
         IdeSettingsView settingsView = new IdeSettingsView(ideSettings);
+        AgentPathSettings agentSettings = new AgentPathSettings(
+                Path.of(System.getProperty("user.home"), ".aidevhub", "agent-paths.xml"));
+        settingsView.getChildren().add(new AgentSettingsView(agentSettings));
         ProjectLogStore logStore = new ProjectLogStore(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "notes"));
         ProjectLogsView notesView = new ProjectLogsView(logStore);
@@ -59,7 +64,7 @@ public final class MainView extends BorderPane {
         refreshButton.setDisable(true);
         refreshButton.setOnAction(event -> refreshGit.run());
         gitView.getChildren().addAll(2, java.util.List.of(refreshButton, branchView, commitView, countView));
-        AgentsView agentsView = new AgentsView();
+        AgentsView agentsView = new AgentsView(agentSettings);
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", dashboardView);
         ProjectListView projectsView = new ProjectListView(ideSettings, project -> {
@@ -88,6 +93,8 @@ public final class MainView extends BorderPane {
         environmentScroll.setFitToWidth(true);
         javafx.scene.control.ScrollPane agentsScroll = new javafx.scene.control.ScrollPane(agentsView);
         agentsScroll.setFitToWidth(true);
+        javafx.scene.control.ScrollPane settingsScroll = new javafx.scene.control.ScrollPane(settingsView);
+        settingsScroll.setFitToWidth(true);
         ListView<String> navigation = new ListView<>();
         navigation.getItems().addAll(pages.keySet());
         navigation.setPrefWidth(200);
@@ -102,7 +109,8 @@ public final class MainView extends BorderPane {
                     if (selected != null) {
                         setCenter(selected.equals("Dashboard") ? dashboardScroll
                                 : selected.equals("Environment") ? environmentScroll
-                                : selected.equals("Agents") ? agentsScroll : pages.get(selected));
+                                : selected.equals("Agents") ? agentsScroll
+                                : selected.equals("Settings") ? settingsScroll : pages.get(selected));
                         currentPage.setText(selected);
                         if (selected.equals("Dashboard")) {
                             dashboardView.setProjectCount(projectsView.projectCount());

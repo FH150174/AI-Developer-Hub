@@ -36,6 +36,7 @@ public final class AgentLauncher {
             + "Read the existing project documents listed there and follow the project rules. "
             + "Briefly confirm the project context then wait for a specific task. Do not modify files or run Git write commands.";
 
+    private final AgentPathSettings settings;
     private final String operatingSystem;
     private final String searchPath;
     private final Predicate<Path> isFile;
@@ -46,8 +47,19 @@ public final class AgentLauncher {
                 Files::isRegularFile, builder -> builder.start());
     }
 
+    public AgentLauncher(AgentPathSettings settings) {
+        this(System.getProperty("os.name", ""), System.getenv("PATH"), Files::isRegularFile,
+                builder -> builder.start(), Objects.requireNonNull(settings));
+    }
+
     AgentLauncher(String operatingSystem, String searchPath,
                   Predicate<Path> isFile, ProcessStarter starter) {
+        this(operatingSystem, searchPath, isFile, starter, null);
+    }
+
+    AgentLauncher(String operatingSystem, String searchPath, Predicate<Path> isFile,
+                  ProcessStarter starter, AgentPathSettings settings) {
+        this.settings = settings;
         this.operatingSystem = Objects.requireNonNull(operatingSystem);
         this.searchPath = searchPath;
         this.isFile = Objects.requireNonNull(isFile);
@@ -65,14 +77,19 @@ public final class AgentLauncher {
         if (directory.toString().startsWith("\\\\")) {
             throw new IOException("当前启动终端不支持 UNC 项目目录。");
         }
-        if (!available(tool)) {
+        Path configured = settings == null ? null : settings.requirePath(tool);
+        if (configured != null && !Files.isRegularFile(configured)) {
+            throw new IOException(tool.displayName() + " 配置路径不存在或无法访问，请在 Settings 中修正。");
+        }
+        if (configured == null && !available(tool)) {
             throw new IOException("未找到 " + tool.displayName() + " 命令（" + tool.command
                     + "）。请确认已安装并加入 PATH，修改环境变量后重启应用。");
         }
         // All shell tokens are fixed constants; paths and user input are never shell commands.
+        String executable = configured == null ? tool.command : "\"" + configured + "\"";
         List<String> command = tool == Tool.POWERSHELL
-                ? List.of("cmd.exe", "/d", "/c", "start", "\"\"", "powershell.exe", "-NoExit")
-                : List.of("cmd.exe", "/d", "/c", "start", "\"\"", "cmd.exe", "/d", "/k", tool.command);
+                ? List.of("cmd.exe", "/d", "/c", "start", "\"\"", configured == null ? "powershell.exe" : executable, "-NoExit")
+                : List.of("cmd.exe", "/d", "/c", "start", "\"\"", "cmd.exe", "/d", "/k", executable);
         if (tool == Tool.ANTIGRAVITY) {
             command = new java.util.ArrayList<>(command);
             command.add(".");
