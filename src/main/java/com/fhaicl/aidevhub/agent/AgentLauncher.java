@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.agent;
 
 import java.io.IOException;
+import com.fhaicl.aidevhub.project.Project;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -33,32 +34,32 @@ public final class AgentLauncher {
 
     private final String operatingSystem;
     private final String searchPath;
-    private final Path directory;
     private final Predicate<Path> isFile;
     private final ProcessStarter starter;
 
     public AgentLauncher() {
         this(System.getProperty("os.name", ""), System.getenv("PATH"),
-                Path.of(System.getProperty("user.home")), Files::isRegularFile, builder -> builder.start());
+                Files::isRegularFile, builder -> builder.start());
     }
 
-    AgentLauncher(String operatingSystem, String searchPath, Path directory,
+    AgentLauncher(String operatingSystem, String searchPath,
                   Predicate<Path> isFile, ProcessStarter starter) {
         this.operatingSystem = Objects.requireNonNull(operatingSystem);
         this.searchPath = searchPath;
-        this.directory = Objects.requireNonNull(directory).toAbsolutePath().normalize();
         this.isFile = Objects.requireNonNull(isFile);
         this.starter = Objects.requireNonNull(starter);
     }
 
-    public void launch(Tool tool) throws IOException {
+    public void launch(Tool tool, Project project) throws IOException {
         Objects.requireNonNull(tool);
         if (!operatingSystem.toLowerCase(Locale.ROOT).startsWith("windows")) {
             throw new IOException("当前仅支持在 Windows 上启动工具。");
         }
-        if (!Files.isDirectory(directory)) throw new IOException("用户目录不存在或无法访问。");
+        if (project == null) throw new IOException("未选择当前项目，请先在 Projects 中设为当前项目。");
+        Path directory = project.path().toAbsolutePath().normalize();
+        if (!Files.isDirectory(directory)) throw new IOException("项目目录不存在或无法访问，请检查当前项目路径。");
         if (directory.toString().startsWith("\\\\")) {
-            throw new IOException("当前启动终端不支持 UNC 用户目录。");
+            throw new IOException("当前启动终端不支持 UNC 项目目录。");
         }
         if (!available(tool)) {
             throw new IOException("未找到 " + tool.displayName() + " 命令（" + tool.command
@@ -68,6 +69,10 @@ public final class AgentLauncher {
         List<String> command = tool == Tool.POWERSHELL
                 ? List.of("cmd.exe", "/d", "/c", "start", "\"\"", "powershell.exe", "-NoExit")
                 : List.of("cmd.exe", "/d", "/c", "start", "\"\"", "cmd.exe", "/d", "/k", tool.command);
+        if (tool == Tool.ANTIGRAVITY) {
+            command = new java.util.ArrayList<>(command);
+            command.add(".");
+        }
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(directory.toFile());
         builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);

@@ -59,6 +59,7 @@ public final class MainView extends BorderPane {
         refreshButton.setDisable(true);
         refreshButton.setOnAction(event -> refreshGit.run());
         gitView.getChildren().addAll(2, java.util.List.of(refreshButton, branchView, commitView, countView));
+        AgentsView agentsView = new AgentsView();
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", dashboardView);
         ProjectListView projectsView = new ProjectListView(ideSettings, project -> {
@@ -70,12 +71,13 @@ public final class MainView extends BorderPane {
             notesView.setProject(project);
             todoView.setProject(project);
             dashboardView.setProject(project);
+            agentsView.setProject(project);
         });
         pages.put("Projects", projectsView);
         pages.put("Git", gitView);
         pages.put("Notes", notesView);
         pages.put("TODO", todoView);
-        pages.put("Agents", new AgentsView());
+        pages.put("Agents", agentsView);
         EnvironmentView environmentView = new EnvironmentView(ideSettings);
         pages.put("Environment", environmentView);
         pages.put("Settings", settingsView);
