@@ -46,13 +46,23 @@ final class VersionCommandExecutor {
                 }
                 // Version banners are small; cap the amount retained from unexpected output.
                 try (var input = Files.newInputStream(output.path())) {
-                    return new Result(process.exitValue(), new String(input.readNBytes(16384), StandardCharsets.UTF_8));
+                    return new Result(process.exitValue(), decode(input.readNBytes(16384)));
                 }
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IOException("版本检测已中断。", exception);
             }
         }
+    }
+
+    static String decode(byte[] bytes) {
+        // WSL list output is UTF-16LE on Windows; other tools normally emit UTF-8.
+        boolean littleEndianBom = bytes.length >= 2 && bytes[0] == (byte) 0xff && bytes[1] == (byte) 0xfe;
+        boolean wideAscii = bytes.length >= 4 && bytes[1] == 0 && bytes[3] == 0;
+        if (littleEndianBom || wideAscii) {
+            return new String(bytes, StandardCharsets.UTF_16LE).replace("\ufeff", "");
+        }
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     private record OutputFile(Path path) implements AutoCloseable {

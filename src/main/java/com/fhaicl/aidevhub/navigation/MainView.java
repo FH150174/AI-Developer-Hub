@@ -75,12 +75,14 @@ public final class MainView extends BorderPane {
         pages.put("Notes", notesView);
         pages.put("TODO", todoView);
         pages.put("Agents", createPage("Agents", "集中访问 AI 开发助手。", "暂无 Agent"));
-        EnvironmentView environmentView = new EnvironmentView();
+        EnvironmentView environmentView = new EnvironmentView(ideSettings);
         pages.put("Environment", environmentView);
         pages.put("Settings", settingsView);
 
         javafx.scene.control.ScrollPane dashboardScroll = new javafx.scene.control.ScrollPane(dashboardView);
         dashboardScroll.setFitToWidth(true);
+        javafx.scene.control.ScrollPane environmentScroll = new javafx.scene.control.ScrollPane(environmentView);
+        environmentScroll.setFitToWidth(true);
         ListView<String> navigation = new ListView<>();
         navigation.getItems().addAll(pages.keySet());
         navigation.setPrefWidth(200);
@@ -93,7 +95,8 @@ public final class MainView extends BorderPane {
         navigation.getSelectionModel().selectedItemProperty().addListener(
                 (observable, previous, selected) -> {
                     if (selected != null) {
-                        setCenter(selected.equals("Dashboard") ? dashboardScroll : pages.get(selected));
+                        setCenter(selected.equals("Dashboard") ? dashboardScroll
+                                : selected.equals("Environment") ? environmentScroll : pages.get(selected));
                         currentPage.setText(selected);
                         if (selected.equals("Dashboard")) {
                             dashboardView.setProjectCount(projectsView.projectCount());
