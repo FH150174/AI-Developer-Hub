@@ -36,6 +36,7 @@ public final class AgentLauncher {
             + "Read the existing project documents listed there and follow the project rules. "
             + "Briefly confirm the project context then wait for a specific task. Do not modify files or run Git write commands.";
 
+    static final String CUSTOM_COMMAND_SCRIPT = "& $env:ComSpec /d /k $env:AIDEVHUB_LAUNCH_COMMAND";
     private final AgentPathSettings settings;
     private final String operatingSystem;
     private final String searchPath;
@@ -77,15 +78,16 @@ public final class AgentLauncher {
         if (directory.toString().startsWith("\\\\")) {
             throw new IOException("当前启动终端不支持 UNC 项目目录。");
         }
-        Path configured = settings == null ? null : settings.requirePath(tool);
+        String customCommand = settings == null ? "" : settings.requireCommand(tool);
+        Path configured = customCommand.isEmpty() && settings != null ? settings.requirePath(tool) : null;
         if (configured != null && !Files.isRegularFile(configured)) {
             throw new IOException(tool.displayName() + " 配置路径不存在或无法访问，请在 Settings 中修正。");
         }
-        if (configured == null && !available(tool)) {
+        if (customCommand.isEmpty() && configured == null && !available(tool)) {
             throw new IOException("未找到 " + tool.displayName() + " 命令（" + tool.command
                     + "）。请确认已安装并加入 PATH，修改环境变量后重启应用。");
         }
-        // All shell tokens are fixed constants; paths and user input are never shell commands.
+        // Project data remains outside the shell command; custom commands use an encoded bootstrap.
         String executable = configured == null ? tool.command : "\"" + configured + "\"";
         List<String> command = tool == Tool.POWERSHELL
                 ? List.of("cmd.exe", "/d", "/c", "start", "\"\"", configured == null ? "powershell.exe" : executable, "-NoExit")
@@ -98,7 +100,15 @@ public final class AgentLauncher {
             command = new java.util.ArrayList<>(command);
             command.add(CONTEXT_PROMPT);
         }
+        if (!customCommand.isEmpty()) {
+            String encoded = java.util.Base64.getEncoder().encodeToString(
+                    CUSTOM_COMMAND_SCRIPT.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+            command = List.of("cmd.exe", "/d", "/c", "start", "\"\"", "powershell.exe",
+                    "-NoLogo", "-NoProfile", "-NoExit", "-EncodedCommand", encoded);
+        }
         ProcessBuilder builder = new ProcessBuilder(command);
+        if (!customCommand.isEmpty()) builder.environment().put("AIDEVHUB_LAUNCH_COMMAND", customCommand);
+        else builder.environment().remove("AIDEVHUB_LAUNCH_COMMAND");
         builder.environment().put("AIDEVHUB_PROJECT_NAME", project.name());
         builder.environment().put("AIDEVHUB_PROJECT_PATH", directory.toString());
         builder.environment().put("AIDEVHUB_PROJECT_CONTEXT", new ProjectContextService().context(project));

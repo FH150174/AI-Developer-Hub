@@ -37,7 +37,7 @@ public final class AgentsView extends VBox {
         Label description = new Label("从当前项目目录打开独立窗口。可在 Settings 配置启动程序路径，留空则从 PATH 查找；WSL 使用默认发行版。CLI 登录及启动错误请查看打开的终端。");
         description.setWrapText(true);
         currentProject.setWrapText(true);
-        Label contextHelp = new Label("Codex / Claude 启动后会收到读取上下文的首条提示。Antigravity / PowerShell / WSL 携带 AIDEVHUB_PROJECT_CONTEXT 环境变量，可复制下方上下文用于聊天。");
+        Label contextHelp = new Label("默认启动 Codex / Claude 时会收到读取上下文的首条提示；自定义命令自行决定参数。Antigravity / PowerShell / WSL 携带 AIDEVHUB_PROJECT_CONTEXT 环境变量，可复制下方上下文用于聊天。");
         contextHelp.setWrapText(true);
         contextPreview.setEditable(false);
         contextPreview.setWrapText(true);

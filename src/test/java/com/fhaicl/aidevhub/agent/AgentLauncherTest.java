@@ -158,4 +158,65 @@ class AgentLauncherTest {
                 () -> launcher.launch(AgentLauncher.Tool.CLAUDE, new Project("project", directory)))
                 .getMessage().contains("配置路径"));
     }
+
+    @Test
+    void customCommandOverridesStalePathAndDoesNotEnterOuterShellCommand() throws IOException {
+        var settings = new AgentPathSettings(directory.resolve("agent-paths.xml"));
+        settings.load();
+        Path executable = Files.createFile(directory.resolve("codex.exe"));
+        String custom = "echo \"%AIDEVHUB_PROJECT_PATH%\" & echo context";
+        settings.save(java.util.Map.of(AgentLauncher.Tool.CODEX, executable.toString()),
+                java.util.Map.of(AgentLauncher.Tool.CODEX, custom));
+        Files.delete(executable);
+        AtomicReference<ProcessBuilder> started = new AtomicReference<>();
+        var launcher = new AgentLauncher("Windows 11", "", path -> false, started::set, settings);
+        launcher.launch(AgentLauncher.Tool.CODEX, new Project("中文 & name", directory));
+        assertEquals(custom, started.get().environment().get("AIDEVHUB_LAUNCH_COMMAND"));
+        assertFalse(started.get().command().toString().contains(custom));
+        assertTrue(started.get().command().contains("-EncodedCommand"));
+        String script = new String(java.util.Base64.getDecoder().decode(started.get().command().getLast()),
+                java.nio.charset.StandardCharsets.UTF_16LE);
+        assertEquals(AgentLauncher.CUSTOM_COMMAND_SCRIPT, script);
+        assertEquals(directory.toFile(), started.get().directory());
+        assertTrue(started.get().environment().get("AIDEVHUB_PROJECT_CONTEXT").contains("中文 & name"));
+    }
+
+    @Test
+    void clearingCustomCommandRestoresDefaultPromptAndPathLookup() throws IOException {
+        var settings = new AgentPathSettings(directory.resolve("agent-paths.xml"));
+        settings.load();
+        settings.save(java.util.Map.of(), java.util.Map.of(AgentLauncher.Tool.CLAUDE, "echo custom"));
+        AtomicReference<ProcessBuilder> started = new AtomicReference<>();
+        var launcher = new AgentLauncher("Windows 11", directory.toString(), path -> true, started::set, settings);
+        launcher.launch(AgentLauncher.Tool.CLAUDE, new Project("project", directory));
+        assertTrue(started.get().environment().containsKey("AIDEVHUB_LAUNCH_COMMAND"));
+        settings.save(java.util.Map.of(), java.util.Map.of());
+        launcher.launch(AgentLauncher.Tool.CLAUDE, new Project("project", directory));
+        assertTrue(started.get().command().contains(AgentLauncher.CONTEXT_PROMPT));
+        assertFalse(started.get().environment().containsKey("AIDEVHUB_LAUNCH_COMMAND"));
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
+    void customBootstrapPassesCmdSyntaxAndProjectEnvironmentToRealShell() throws Exception {
+        String script = AgentLauncher.CUSTOM_COMMAND_SCRIPT.replace("/k", "/c");
+        String encoded = java.util.Base64.getEncoder().encodeToString(script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        Path output = directory.resolve("output.txt");
+        ProcessBuilder builder = new ProcessBuilder("powershell.exe", "-NoLogo", "-NoProfile", "-EncodedCommand", encoded);
+        builder.directory(directory.toFile());
+        builder.environment().put("AIDEVHUB_LAUNCH_COMMAND", "echo FIRST & echo \"%AIDEVHUB_PROJECT_PATH%\"");
+        builder.environment().put("AIDEVHUB_PROJECT_PATH", directory.toString());
+        builder.redirectErrorStream(true).redirectOutput(output.toFile());
+        Process process = builder.start();
+        try {
+            process.getOutputStream().close();
+            assertTrue(process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(0, process.exitValue());
+            String text = Files.readString(output, java.nio.charset.Charset.defaultCharset());
+            assertTrue(text.contains("FIRST"), text);
+            assertTrue(text.contains(directory.toString()), text);
+        } finally {
+            if (process.isAlive()) process.destroyForcibly();
+        }
+    }
 }

@@ -13,6 +13,7 @@ import java.util.Properties;
 public final class AgentPathSettings {
     private final Path file;
     private Map<AgentLauncher.Tool, Path> paths = new EnumMap<>(AgentLauncher.Tool.class);
+    private Map<AgentLauncher.Tool, String> commands = new EnumMap<>(AgentLauncher.Tool.class);
     private boolean loaded;
 
     public AgentPathSettings(Path file) {
@@ -26,12 +27,20 @@ public final class AgentPathSettings {
             data.loadFromXML(input);
         } catch (NoSuchFileException exception) {
             paths = new EnumMap<>(AgentLauncher.Tool.class);
+            commands = new EnumMap<>(AgentLauncher.Tool.class);
             loaded = true;
             return;
         }
         Map<AgentLauncher.Tool, Path> restored = new EnumMap<>(AgentLauncher.Tool.class);
+        Map<AgentLauncher.Tool, String> restoredCommands = new EnumMap<>(AgentLauncher.Tool.class);
         try {
             for (String key : data.stringPropertyNames()) {
+                if (key.endsWith(".command")) {
+                    AgentLauncher.Tool tool = AgentLauncher.Tool.valueOf(key.substring(0, key.length() - ".command".length()));
+                    String command = validateCommand(data.getProperty(key));
+                    if (!command.isEmpty()) restoredCommands.put(tool, command);
+                    continue;
+                }
                 AgentLauncher.Tool tool = AgentLauncher.Tool.valueOf(key);
                 Path path = Path.of(data.getProperty(key));
                 if (!path.isAbsolute() || !accepts(tool, path)) {
@@ -44,6 +53,7 @@ public final class AgentPathSettings {
             throw new IOException("Agent 路径配置无效：" + file, exception);
         }
         paths = restored;
+        commands = restoredCommands;
         loaded = true;
     }
 
@@ -57,7 +67,21 @@ public final class AgentPathSettings {
         return path;
     }
 
+    public synchronized String command(AgentLauncher.Tool tool) {
+        return commands.getOrDefault(Objects.requireNonNull(tool), "");
+    }
+
+    public synchronized String requireCommand(AgentLauncher.Tool tool) throws IOException {
+        if (!loaded) throw new IOException("Agent 配置加载失败，请检查配置文件后重启。");
+        return command(tool);
+    }
+
     public synchronized void save(Map<AgentLauncher.Tool, String> values) throws IOException {
+        save(values, commands);
+    }
+
+    public synchronized void save(Map<AgentLauncher.Tool, String> values,
+                                  Map<AgentLauncher.Tool, String> commandValues) throws IOException {
         if (!loaded) throw new IOException("配置尚未成功加载，禁止覆盖原配置。");
         Map<AgentLauncher.Tool, Path> updated = new EnumMap<>(AgentLauncher.Tool.class);
         Properties data = new Properties();
@@ -77,6 +101,19 @@ public final class AgentPathSettings {
             updated.put(tool, path);
             data.setProperty(tool.name(), path.toString());
         }
+        Map<AgentLauncher.Tool, String> updatedCommands = new EnumMap<>(AgentLauncher.Tool.class);
+        for (AgentLauncher.Tool tool : AgentLauncher.Tool.values()) {
+            String command;
+            try {
+                command = validateCommand(commandValues.getOrDefault(tool, ""));
+            } catch (IllegalArgumentException exception) {
+                throw new IOException(tool.displayName() + " 命令无效：请输入不超过 4000 字符的单行 CMD 命令。", exception);
+            }
+            if (!command.isEmpty()) {
+                updatedCommands.put(tool, command);
+                data.setProperty(tool.name() + ".command", command);
+            }
+        }
         Files.createDirectories(file.getParent());
         Path temporary = Files.createTempFile(file.getParent(), "agent-paths-", ".tmp");
         try {
@@ -88,6 +125,7 @@ public final class AgentPathSettings {
             Files.deleteIfExists(temporary);
         }
         paths = updated;
+        commands = updatedCommands;
     }
 
     public static String[] executableNames(AgentLauncher.Tool tool) {
@@ -111,5 +149,13 @@ public final class AgentPathSettings {
             if (path.getFileName().toString().equalsIgnoreCase(name)) return true;
         }
         return false;
+    }
+
+    private static String validateCommand(String value) {
+        Objects.requireNonNull(value);
+        if (value.length() > 4000 || value.chars().anyMatch(character -> Character.isISOControl(character))) {
+            throw new IllegalArgumentException("Command must be a single line of at most 4000 characters");
+        }
+        return value.strip();
     }
 }

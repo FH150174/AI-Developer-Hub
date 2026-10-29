@@ -71,4 +71,38 @@ class AgentPathSettingsTest {
         Files.createFile(unsafe);
         assertThrows(IOException.class, () -> settings.save(Map.of(AgentLauncher.Tool.CODEX, unsafe.toString())));
     }
+
+    @Test
+    void savesCommandsRestoresThemAndCanClearWithoutChangingPaths() throws IOException {
+        Path file = directory.resolve("agent-paths.xml");
+        Path executable = Files.createFile(directory.resolve("codex.cmd"));
+        var settings = new AgentPathSettings(file);
+        settings.load();
+        String command = "  echo 中文 & echo \"%AIDEVHUB_PROJECT_PATH%\"  ";
+        settings.save(Map.of(AgentLauncher.Tool.CODEX, executable.toString()),
+                Map.of(AgentLauncher.Tool.CODEX, command));
+        var restored = new AgentPathSettings(file);
+        restored.load();
+        assertEquals(command.strip(), restored.requireCommand(AgentLauncher.Tool.CODEX));
+        assertEquals(executable, restored.requirePath(AgentLauncher.Tool.CODEX));
+        restored.save(Map.of());
+        assertEquals(command.strip(), restored.requireCommand(AgentLauncher.Tool.CODEX));
+        restored.save(Map.of(), Map.of());
+        restored.load();
+        assertEquals("", restored.requireCommand(AgentLauncher.Tool.CODEX));
+    }
+
+    @Test
+    void rejectsMultilineAndOversizedCommandsWithoutChangingSavedConfig() throws IOException {
+        Path file = directory.resolve("agent-paths.xml");
+        var settings = new AgentPathSettings(file);
+        settings.load();
+        settings.save(Map.of(), Map.of(AgentLauncher.Tool.CODEX, "echo valid"));
+        String before = Files.readString(file);
+        for (String bad : new String[] {"echo first\necho second", "echo first\recho second", "echo bad\0", "x".repeat(4001)}) {
+            assertThrows(IOException.class, () -> settings.save(Map.of(), Map.of(AgentLauncher.Tool.CODEX, bad)));
+            assertEquals(before, Files.readString(file));
+            assertEquals("echo valid", settings.requireCommand(AgentLauncher.Tool.CODEX));
+        }
+    }
 }
