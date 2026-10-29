@@ -29,7 +29,17 @@ class AgentLauncherTest {
                 command = new java.util.ArrayList<>(command);
                 command.add(".");
             }
+            if (tool == AgentLauncher.Tool.CODEX || tool == AgentLauncher.Tool.CLAUDE) {
+                command = new java.util.ArrayList<>(command);
+                command.add(AgentLauncher.CONTEXT_PROMPT);
+            }
             assertEquals(command, started.get().command());
+            assertEquals("project", started.get().environment().get("AIDEVHUB_PROJECT_NAME"));
+            assertEquals(directory.toAbsolutePath().toString(), started.get().environment().get("AIDEVHUB_PROJECT_PATH"));
+            assertTrue(started.get().environment().get("AIDEVHUB_PROJECT_CONTEXT").contains(directory.toString()));
+            if (tool == AgentLauncher.Tool.WSL) {
+                assertTrue(started.get().environment().get("WSLENV").contains("AIDEVHUB_PROJECT_CONTEXT/u"));
+            }
             assertEquals(directory.toAbsolutePath().toFile(), started.get().directory());
             index++;
         }
@@ -103,5 +113,19 @@ class AgentLauncherTest {
         assertEquals(first.toFile(), started.get().directory());
         launcher.launch(AgentLauncher.Tool.WSL, new Project("second", second));
         assertEquals(second.toFile(), started.get().directory());
+    }
+
+    @Test
+    void contextIsDataOutsideShellCommandAndSwitchesWithProject() throws IOException {
+        AtomicReference<ProcessBuilder> started = new AtomicReference<>();
+        var launcher = new AgentLauncher("Windows 11", directory.toString(), path -> true, started::set);
+        String name = "中文 & echo bad %PATH% \" quoted";
+        launcher.launch(AgentLauncher.Tool.CODEX, new Project(name, directory));
+        assertTrue(started.get().environment().get("AIDEVHUB_PROJECT_CONTEXT").contains(name));
+        assertFalse(started.get().command().toString().contains(name));
+        Path other = Files.createDirectory(directory.resolve("other"));
+        launcher.launch(AgentLauncher.Tool.CLAUDE, new Project("other", other));
+        assertEquals("other", started.get().environment().get("AIDEVHUB_PROJECT_NAME"));
+        assertFalse(started.get().environment().get("AIDEVHUB_PROJECT_CONTEXT").contains(name));
     }
 }

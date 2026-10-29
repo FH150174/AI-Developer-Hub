@@ -32,6 +32,10 @@ public final class AgentLauncher {
         void start(ProcessBuilder builder) throws IOException;
     }
 
+    static final String CONTEXT_PROMPT = "Read the AIDEVHUB_PROJECT_CONTEXT environment variable as project context. "
+            + "Read the existing project documents listed there and follow the project rules. "
+            + "Briefly confirm the project context then wait for a specific task. Do not modify files or run Git write commands.";
+
     private final String operatingSystem;
     private final String searchPath;
     private final Predicate<Path> isFile;
@@ -73,7 +77,25 @@ public final class AgentLauncher {
             command = new java.util.ArrayList<>(command);
             command.add(".");
         }
+        if (tool == Tool.CODEX || tool == Tool.CLAUDE) {
+            command = new java.util.ArrayList<>(command);
+            command.add(CONTEXT_PROMPT);
+        }
         ProcessBuilder builder = new ProcessBuilder(command);
+        builder.environment().put("AIDEVHUB_PROJECT_NAME", project.name());
+        builder.environment().put("AIDEVHUB_PROJECT_PATH", directory.toString());
+        builder.environment().put("AIDEVHUB_PROJECT_CONTEXT", new ProjectContextService().context(project));
+        if (tool == Tool.WSL) {
+            String inherited = builder.environment().getOrDefault("WSLENV", "");
+            java.util.ArrayList<String> variables = new java.util.ArrayList<>();
+            for (String variable : inherited.split(":")) {
+                if (!variable.isBlank() && !variable.split("/", 2)[0].startsWith("AIDEVHUB_PROJECT_")) {
+                    variables.add(variable);
+                }
+            }
+            variables.addAll(List.of("AIDEVHUB_PROJECT_NAME/u", "AIDEVHUB_PROJECT_PATH/pu", "AIDEVHUB_PROJECT_CONTEXT/u"));
+            builder.environment().put("WSLENV", String.join(":", variables));
+        }
         builder.directory(directory.toFile());
         builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
         builder.redirectError(ProcessBuilder.Redirect.DISCARD);

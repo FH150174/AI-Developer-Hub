@@ -86,6 +86,8 @@ public final class MainView extends BorderPane {
         dashboardScroll.setFitToWidth(true);
         javafx.scene.control.ScrollPane environmentScroll = new javafx.scene.control.ScrollPane(environmentView);
         environmentScroll.setFitToWidth(true);
+        javafx.scene.control.ScrollPane agentsScroll = new javafx.scene.control.ScrollPane(agentsView);
+        agentsScroll.setFitToWidth(true);
         ListView<String> navigation = new ListView<>();
         navigation.getItems().addAll(pages.keySet());
         navigation.setPrefWidth(200);
@@ -99,7 +101,8 @@ public final class MainView extends BorderPane {
                 (observable, previous, selected) -> {
                     if (selected != null) {
                         setCenter(selected.equals("Dashboard") ? dashboardScroll
-                                : selected.equals("Environment") ? environmentScroll : pages.get(selected));
+                                : selected.equals("Environment") ? environmentScroll
+                                : selected.equals("Agents") ? agentsScroll : pages.get(selected));
                         currentPage.setText(selected);
                         if (selected.equals("Dashboard")) {
                             dashboardView.setProjectCount(projectsView.projectCount());
