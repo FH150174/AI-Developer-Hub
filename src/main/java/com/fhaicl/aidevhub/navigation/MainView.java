@@ -35,12 +35,13 @@ public final class MainView extends BorderPane {
         IdePathSettings ideSettings = new IdePathSettings(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "ide-paths.xml"));
         IdeSettingsView settingsView = new IdeSettingsView(ideSettings);
-        ProjectLogsView notesView = new ProjectLogsView(new ProjectLogStore(
-                Path.of(System.getProperty("user.home"), ".aidevhub", "notes")));
+        ProjectLogStore logStore = new ProjectLogStore(
+                Path.of(System.getProperty("user.home"), ".aidevhub", "notes"));
+        ProjectLogsView notesView = new ProjectLogsView(logStore);
         ProjectTodoStore todoStore = new ProjectTodoStore(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "todos"));
         ProjectTodoView todoView = new ProjectTodoView(todoStore);
-        DashboardView dashboardView = new DashboardView(new ProjectTodoService(todoStore));
+        DashboardView dashboardView = new DashboardView(new ProjectTodoService(todoStore), logStore, ideSettings);
         Label currentProject = new Label("未选择项目");
         GitBranchView branchView = new GitBranchView();
         GitLatestCommitView commitView = new GitLatestCommitView();
@@ -58,7 +59,7 @@ public final class MainView extends BorderPane {
         gitView.getChildren().addAll(2, java.util.List.of(refreshButton, branchView, commitView, countView));
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", dashboardView);
-        pages.put("Projects", new ProjectListView(ideSettings, project -> {
+        ProjectListView projectsView = new ProjectListView(ideSettings, project -> {
             refreshButton.setDisable(project == null);
             currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name());
             branchView.setProject(project);
@@ -67,7 +68,8 @@ public final class MainView extends BorderPane {
             notesView.setProject(project);
             todoView.setProject(project);
             dashboardView.setProject(project);
-        }));
+        });
+        pages.put("Projects", projectsView);
         pages.put("Git", gitView);
         pages.put("Notes", notesView);
         pages.put("TODO", todoView);
@@ -75,6 +77,8 @@ public final class MainView extends BorderPane {
         pages.put("Environment", createPage("Environment", "View your development environment information."));
         pages.put("Settings", settingsView);
 
+        javafx.scene.control.ScrollPane dashboardScroll = new javafx.scene.control.ScrollPane(dashboardView);
+        dashboardScroll.setFitToWidth(true);
         ListView<String> navigation = new ListView<>();
         navigation.getItems().addAll(pages.keySet());
         navigation.setPrefWidth(200);
@@ -87,9 +91,10 @@ public final class MainView extends BorderPane {
         navigation.getSelectionModel().selectedItemProperty().addListener(
                 (observable, previous, selected) -> {
                     if (selected != null) {
-                        setCenter(pages.get(selected));
+                        setCenter(selected.equals("Dashboard") ? dashboardScroll : pages.get(selected));
                         currentPage.setText(selected);
                         if (selected.equals("Dashboard")) {
+                            dashboardView.setProjectCount(projectsView.projectCount());
                             dashboardView.refresh();
                         } else if (selected.equals("Git")) {
                             refreshGit.run();

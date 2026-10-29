@@ -430,6 +430,10 @@ public final class ProjectListView extends VBox {
         return button;
     }
 
+    public int projectCount() {
+        return loadFailed.get() ? -1 : projects.projects().size();
+    }
+
     private boolean saveChanges(List<Project> before) {
         try {
             store.save(projects.projects());

@@ -19,6 +19,10 @@ public final class GitChangeCountView extends VBox {
     private Task<GitWorkingTreeReader.Result> activeTask;
 
     public GitChangeCountView() {
+        this(true);
+    }
+
+    public GitChangeCountView(boolean showDetails) {
         super(8);
         countLabel.setWrapText(true);
         Label scope = new Label("统计整个仓库的已暂存、未暂存和未跟踪文件；同一文件只计一次，不含忽略文件。");
@@ -44,7 +48,8 @@ public final class GitChangeCountView extends VBox {
         files.setPrefHeight(280);
         files.setMinHeight(140);
         VBox.setVgrow(files, Priority.ALWAYS);
-        getChildren().addAll(countLabel, scope, heading, legend, files);
+        getChildren().addAll(countLabel, scope);
+        if (showDetails) getChildren().addAll(heading, legend, files);
     }
 
     public void setProject(Project project) {

@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Comparator;
+import java.util.Optional;
 
 public final class ProjectLogService {
     private final ProjectLogStore store;
@@ -30,6 +32,14 @@ public final class ProjectLogService {
         var updated = new ArrayList<>(expected);
         updated.remove(index);
         return save(project, expected, updated);
+    }
+
+    public Optional<DevelopmentLog> latest(Project project) throws IOException {
+        Comparator<DevelopmentLog> byDate = Comparator.comparing(
+                DevelopmentLog::date, Comparator.nullsFirst(Comparator.naturalOrder()));
+        // For equal or absent dates, prefer the later entry in the saved list.
+        return store.load(project).stream().reduce((previous, next) ->
+                byDate.compare(previous, next) > 0 ? previous : next);
     }
 
     private List<DevelopmentLog> save(Project project, List<DevelopmentLog> expected, List<DevelopmentLog> updated) throws IOException {

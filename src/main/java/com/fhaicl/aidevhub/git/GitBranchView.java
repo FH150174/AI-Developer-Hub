@@ -14,7 +14,13 @@ public final class GitBranchView extends VBox {
     private Task<GitBranchReader.Result> activeTask;
 
     public GitBranchView() {
+        this(true);
+    }
+
+    public GitBranchView(boolean showProject) {
         super(8);
+        projectLabel.setVisible(showProject);
+        projectLabel.setManaged(showProject);
         projectLabel.setWrapText(true);
         branchLabel.setWrapText(true);
         getChildren().addAll(projectLabel, branchLabel);

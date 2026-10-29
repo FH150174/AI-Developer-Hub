@@ -91,4 +91,33 @@ class ProjectLogServiceTest {
         assertThrows(IllegalArgumentException.class, () -> new DevelopmentLog("\t", "body"));
         assertEquals(old, store.load(project));
     }
+    @Test
+    void latestUsesDateThenSavedOrderAndKeepsProjectsSeparate() throws IOException {
+        var store = new ProjectLogStore(directory.resolve("notes"));
+        var service = new ProjectLogService(store);
+        var project = new Project("project", directory.resolve("project"));
+        var other = new Project("other", directory.resolve("other"));
+        assertTrue(service.latest(project).isEmpty());
+        var day = java.time.LocalDate.of(2026, 10, 29);
+        var latest = new DevelopmentLog("latest", "body", day);
+        store.save(project, List.of(new DevelopmentLog("same day", "", day), latest,
+                new DevelopmentLog("older", "", day.minusDays(1)), new DevelopmentLog("legacy", "")));
+        store.save(other, List.of(new DevelopmentLog("other project", "", day.plusDays(1))));
+        assertEquals(latest, service.latest(project).orElseThrow());
+        var legacy = new DevelopmentLog("last legacy", "");
+        store.save(project, List.of(new DevelopmentLog("first legacy", ""), legacy));
+        assertEquals(legacy, service.latest(project).orElseThrow());
+    }
+
+    @Test
+    void latestReportsCorruptStorage() throws IOException {
+        Path storage = directory.resolve("notes");
+        var store = new ProjectLogStore(storage);
+        var project = new Project("project", directory.resolve("project"));
+        store.save(project, List.of(new DevelopmentLog("title", "")));
+        try (var files = Files.list(storage)) {
+            Files.writeString(files.findFirst().orElseThrow(), "broken xml");
+        }
+        assertThrows(IOException.class, () -> new ProjectLogService(store).latest(project));
+    }
 }
