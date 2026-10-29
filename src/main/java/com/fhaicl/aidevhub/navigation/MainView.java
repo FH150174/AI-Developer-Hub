@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.navigation;
 
 import com.fhaicl.aidevhub.project.ProjectListView;
+import com.fhaicl.aidevhub.agent.AgentsView;
 import com.fhaicl.aidevhub.environment.EnvironmentView;
 import com.fhaicl.aidevhub.dashboard.DashboardView;
 import com.fhaicl.aidevhub.todo.ProjectTodoService;
@@ -74,7 +75,7 @@ public final class MainView extends BorderPane {
         pages.put("Git", gitView);
         pages.put("Notes", notesView);
         pages.put("TODO", todoView);
-        pages.put("Agents", createPage("Agents", "集中访问 AI 开发助手。", "暂无 Agent"));
+        pages.put("Agents", new AgentsView());
         EnvironmentView environmentView = new EnvironmentView(ideSettings);
         pages.put("Environment", environmentView);
         pages.put("Settings", settingsView);
