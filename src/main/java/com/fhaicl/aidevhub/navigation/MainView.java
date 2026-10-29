@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.navigation;
 
 import com.fhaicl.aidevhub.project.ProjectListView;
+import com.fhaicl.aidevhub.environment.EnvironmentView;
 import com.fhaicl.aidevhub.dashboard.DashboardView;
 import com.fhaicl.aidevhub.todo.ProjectTodoService;
 import com.fhaicl.aidevhub.todo.ProjectTodoView;
@@ -74,7 +75,8 @@ public final class MainView extends BorderPane {
         pages.put("Notes", notesView);
         pages.put("TODO", todoView);
         pages.put("Agents", createPage("Agents", "集中访问 AI 开发助手。", "暂无 Agent"));
-        pages.put("Environment", createPage("Environment", "View your development environment information."));
+        EnvironmentView environmentView = new EnvironmentView();
+        pages.put("Environment", environmentView);
         pages.put("Settings", settingsView);
 
         javafx.scene.control.ScrollPane dashboardScroll = new javafx.scene.control.ScrollPane(dashboardView);
@@ -100,6 +102,8 @@ public final class MainView extends BorderPane {
                             refreshGit.run();
                         } else if (selected.equals("Notes")) {
                             notesView.refresh();
+                        } else if (selected.equals("Environment")) {
+                            environmentView.refresh();
                         } else if (selected.equals("TODO")) {
                             todoView.refresh();
                         }
