@@ -1,11 +1,11 @@
 package com.fhaicl.aidevhub.git;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 import java.io.IOException;
 
@@ -15,7 +15,7 @@ public final class GitInstallationView extends VBox {
         setPadding(new Insets(24));
         setMinWidth(0);
         Label title = new Label("Git");
-        title.setFont(Font.font(24));
+        title.getStyleClass().add("page-title");
         Label description = new Label("检测当前应用能否通过 PATH 调用 Git，无需选择项目。");
         description.setWrapText(true);
         Label status = new Label("尚未检测 Git。");

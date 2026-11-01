@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.notes;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import com.fhaicl.aidevhub.project.Project;
 import javafx.concurrent.Task;
 import javafx.beans.property.BooleanProperty;
@@ -22,7 +23,6 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -50,10 +50,10 @@ public final class ProjectLogsView extends VBox {
         setPadding(new Insets(24));
         setMinWidth(0);
         Label title = new Label("Notes");
-        title.setFont(Font.font(24));
+        title.getStyleClass().add("page-title");
         projectLabel.setWrapText(true);
         status.setWrapText(true);
-        logs.setPlaceholder(new Label("暂无可显示的日志"));
+        logs.setPlaceholder(Ui.empty("暂无开发日志", "先在 Projects 选择当前项目，再点击“新建日志”记录进展。"));
         logs.setCellFactory(view -> new ListCell<>() {
             @Override
             protected void updateItem(DevelopmentLog log, boolean empty) {
@@ -80,6 +80,8 @@ public final class ProjectLogsView extends VBox {
         VBox.setVgrow(logs, Priority.ALWAYS);
         VBox.setVgrow(reading, Priority.ALWAYS);
         Button create = new Button("新建日志");
+        create.getStyleClass().add("primary");
+        create.setGraphic(Ui.icon("Notes"));
         Button edit = new Button("编辑日志");
         Button delete = new Button("删除日志");
         create.disableProperty().bind(ready.not());
@@ -149,7 +151,7 @@ public final class ProjectLogsView extends VBox {
         List<DevelopmentLog> before = List.copyOf(logs.getItems());
         DevelopmentLog original = creating ? null : before.get(index);
         Dialog<Void> dialog = new Dialog<>();
-        dialog.initOwner(getScene().getWindow());
+        Ui.dialog(dialog, this);
         dialog.setTitle(creating ? "新建日志" : "编辑日志");
         dialog.setHeaderText("项目：" + selectedProject.name());
         dialog.setResizable(true);
@@ -190,6 +192,7 @@ public final class ProjectLogsView extends VBox {
                         : service.edit(selectedProject, before, index, replacement);
                 logs.getItems().setAll(updated);
                 logs.getSelectionModel().select(creating ? updated.size() - 1 : index);
+                Ui.toast(this, "日志已保存。");
                 status.setText("日志已保存。开发日志：" + updated.size() + " 条");
             } catch (IOException | SecurityException exception) {
                 event.consume();
@@ -208,7 +211,7 @@ public final class ProjectLogsView extends VBox {
         List<DevelopmentLog> before = List.copyOf(logs.getItems());
         Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
                 "确定删除日志“" + before.get(index).title() + "”？", ButtonType.OK, ButtonType.CANCEL);
-        confirmation.initOwner(getScene().getWindow());
+        Ui.dialog(confirmation, this);
         confirmation.setTitle("删除日志");
         confirmation.setHeaderText("项目：" + selectedProject.name());
         if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
@@ -216,6 +219,7 @@ public final class ProjectLogsView extends VBox {
             List<DevelopmentLog> updated = service.delete(selectedProject, before, index);
             logs.getItems().setAll(updated);
             if (!updated.isEmpty()) logs.getSelectionModel().select(Math.min(index, updated.size() - 1));
+            Ui.toast(this, "日志已删除。");
             status.setText(updated.isEmpty() ? "当前项目暂无开发日志。" : "日志已删除。开发日志：" + updated.size() + " 条");
         } catch (IOException | SecurityException exception) {
             status.setText("删除失败，列表保持不变。请检查文件权限、磁盘状态或日志是否已变化。");

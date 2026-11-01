@@ -17,6 +17,7 @@ public final class AiDeveloperHubApplication extends Application {
             dataDirectory = AppDataDirectory.initialize();
         } catch (java.io.IOException | RuntimeException exception) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
+            com.fhaicl.aidevhub.ui.Ui.dialog(alert, null);
             alert.setTitle("应用数据初始化失败");
             alert.setHeaderText("无法准备本地数据目录，应用未启动。");
             alert.setContentText("请检查 APPDATA 与旧 .aidevhub 目录的访问权限。原因：" + exception.getMessage());

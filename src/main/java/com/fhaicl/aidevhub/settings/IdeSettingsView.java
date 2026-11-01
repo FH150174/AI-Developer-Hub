@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.settings;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -7,7 +8,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -21,12 +21,13 @@ public final class IdeSettingsView extends VBox {
         setPadding(new Insets(24));
         setMinWidth(0);
         Label title = new Label("Settings");
-        title.setFont(Font.font(24));
-        Label description = new Label("设置 IDE 启动程序路径。留空并保存可清除配置；保存后立即生效，重启后保留。");
+        title.getStyleClass().add("page-title");
+        Label description = new Label("管理应用偏好、IDE 和 Agent 配置。IDE 路径留空保存可清除；保存后立即生效，重启后保留。");
         description.setWrapText(true);
         Label status = new Label();
         status.setWrapText(true);
         VBox form = new VBox(12);
+        form.getStyleClass().add("settings-section");
         Map<IdePathSettings.Ide, TextField> fields = new EnumMap<>(IdePathSettings.Ide.class);
         try {
             settings.load();
@@ -55,6 +56,7 @@ public final class IdeSettingsView extends VBox {
             form.getChildren().addAll(new Label(ide.displayName()), row);
         }
         Button save = new Button("保存 IDE 路径");
+        save.getStyleClass().add("primary");
         save.setOnAction(event -> {
             Map<IdePathSettings.Ide, String> values = new EnumMap<>(IdePathSettings.Ide.class);
             fields.forEach((ide, field) -> values.put(ide, field.getText()));
@@ -62,6 +64,7 @@ public final class IdeSettingsView extends VBox {
                 settings.save(values);
                 fields.forEach((ide, field) -> field.setText(
                         settings.path(ide) == null ? "" : settings.path(ide).toString()));
+                Ui.toast(this, "IDE 路径已保存。");
                 status.setText("IDE 路径已保存。");
             } catch (IOException | SecurityException exception) {
                 status.setText("保存失败，原配置保持不变。原因：" + exception.getMessage());

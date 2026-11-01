@@ -14,6 +14,7 @@ public final class MarkdownPreview extends ScrollPane {
     private final VBox document = new VBox(10);
 
     public MarkdownPreview() {
+        getStyleClass().add("markdown");
         setFitToWidth(true);
         setMinHeight(100);
         document.setPadding(new Insets(12));
@@ -39,9 +40,9 @@ public final class MarkdownPreview extends ScrollPane {
                 flow.getChildren().add(text);
             }
             if (block.kind() == MarkdownParser.Kind.CODE) {
-                flow.setStyle("-fx-background-color: -fx-control-inner-background; -fx-padding: 10;");
+                flow.getStyleClass().add("markdown-code");
             } else if (block.kind() == MarkdownParser.Kind.QUOTE) {
-                flow.setStyle("-fx-border-color: -fx-box-border; -fx-border-width: 0 0 0 3; -fx-padding: 0 0 0 10;");
+                flow.getStyleClass().add("markdown-quote");
             }
             document.getChildren().add(flow);
         }

@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.agent;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import javafx.concurrent.Task;
 import com.fhaicl.aidevhub.project.Project;
 import java.util.EnumMap;
@@ -13,7 +14,6 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 public final class AgentsView extends VBox {
     private final AgentLauncher launcher;
@@ -33,7 +33,7 @@ public final class AgentsView extends VBox {
         setPadding(new Insets(24));
         setMinWidth(0);
         Label title = new Label("Agents");
-        title.setFont(Font.font(24));
+        title.getStyleClass().add("page-title");
         Label description = new Label("从当前项目目录打开独立窗口。可在 Settings 配置启动程序路径，留空则从 PATH 查找；WSL 使用默认发行版。CLI 登录及启动错误请查看打开的终端。");
         description.setWrapText(true);
         currentProject.setWrapText(true);
@@ -76,6 +76,7 @@ public final class AgentsView extends VBox {
                     activeTasks.remove(tool);
                     launch.setDisable(project == null);
                     status.setText("已发送启动请求，请查看独立窗口。");
+                    Ui.toast(this, tool.displayName() + " 启动请求已发送。");
                 });
                 task.setOnFailed(done -> {
                     if (activeTasks.get(tool) != task) return;
@@ -89,6 +90,7 @@ public final class AgentsView extends VBox {
                 thread.setDaemon(true);
                 thread.start();
             });
+            row.getStyleClass().add("card");
             getChildren().add(row);
         }
         setProject(null);

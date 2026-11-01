@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.project;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import com.fhaicl.aidevhub.settings.AppSettings;
 import com.fhaicl.aidevhub.git.GitRepositoryChecker;
 import com.fhaicl.aidevhub.git.GitException;
@@ -16,9 +17,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import com.fhaicl.aidevhub.settings.IdePathSettings;
 
@@ -44,12 +43,12 @@ public final class ProjectListView extends VBox {
         this.ideSettings = java.util.Objects.requireNonNull(ideSettings);
         this.onCurrentProjectChanged = java.util.Objects.requireNonNull(onCurrentProjectChanged);
         Label title = new Label("Projects");
-        title.setFont(Font.font(24));
+        title.getStyleClass().add("page-title");
         Label description = new Label("集中管理本地开发项目。");
         description.setWrapText(true);
 
         TableView<Project> table = new TableView<>();
-        table.setPlaceholder(new Label("暂无项目"));
+        table.setPlaceholder(Ui.empty("还没有项目", "点击“添加项目”，选择一个本地开发目录开始。"));
         Label storageStatus = new Label();
         storageStatus.setWrapText(true);
         try {
@@ -73,6 +72,8 @@ public final class ProjectListView extends VBox {
         VBox.setVgrow(table, Priority.ALWAYS);
 
         Button addButton = new Button("添加项目");
+        addButton.getStyleClass().add("primary");
+        addButton.setGraphic(Ui.icon("Projects"));
         addButton.disableProperty().bind(loadFailed);
         addButton.setOnAction(event -> {
             DirectoryChooser chooser = new DirectoryChooser();
@@ -88,7 +89,7 @@ public final class ProjectListView extends VBox {
             List<Project> before = projects.projects();
             if (!projects.add(directory.toPath())) {
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, "该项目路径已在列表中。");
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("重复项目");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -117,14 +118,14 @@ public final class ProjectListView extends VBox {
                 return;
             }
             TextInputDialog dialog = new TextInputDialog(selected.name());
-            dialog.initOwner(getScene().getWindow());
+            Ui.dialog(dialog, this);
             dialog.setTitle("修改项目名称");
             dialog.setHeaderText(null);
             dialog.setContentText("项目名称：");
             dialog.showAndWait().ifPresent(name -> {
                 if (name.strip().isEmpty()) {
                     Alert alert = new Alert(Alert.AlertType.ERROR, "项目名称不能为空或仅包含空白字符。");
-                    alert.initOwner(getScene().getWindow());
+                    Ui.dialog(alert, this);
                     alert.setTitle("名称无效");
                     alert.setHeaderText(null);
                     alert.showAndWait();
@@ -165,7 +166,7 @@ public final class ProjectListView extends VBox {
                      | IllegalArgumentException exception) {
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法打开项目目录。原因：" + exception.getMessage());
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("打开失败");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -185,7 +186,7 @@ public final class ProjectListView extends VBox {
             } catch (IOException | SecurityException exception) {
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法打开终端。原因：" + exception.getMessage());
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("打开失败");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -205,7 +206,7 @@ public final class ProjectListView extends VBox {
             } catch (IOException | SecurityException exception) {
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法用 IDEA 打开项目。原因：" + exception.getMessage());
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("打开失败");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -236,7 +237,7 @@ public final class ProjectListView extends VBox {
                         "无法检查项目路径，请检查访问权限或磁盘状态。\n路径：" + selected.path()
                                 + "\n原因：" + exception.getMessage());
             }
-            alert.initOwner(getScene().getWindow());
+            Ui.dialog(alert, this);
             alert.setTitle("路径检查");
             alert.setHeaderText(null);
             alert.showAndWait();
@@ -267,7 +268,7 @@ public final class ProjectListView extends VBox {
                     case NOT_DIRECTORY -> "项目路径存在，但不是目录。";
                 };
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, message + "\n路径：" + selected.path());
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("Git 仓库检测");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -276,7 +277,7 @@ public final class ProjectListView extends VBox {
                 checkGitButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法检测 Git 仓库。原因：" + GitException.userMessage(task.getException()));
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("Git 仓库检测失败");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -312,7 +313,7 @@ public final class ProjectListView extends VBox {
                     case NOT_DIRECTORY -> "项目路径存在，但不是目录。";
                 };
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, message + "\n路径：" + selected.path());
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("当前分支");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -321,7 +322,7 @@ public final class ProjectListView extends VBox {
                 branchButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法获取当前分支。原因：" + GitException.userMessage(task.getException()));
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("获取当前分支失败");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -358,7 +359,7 @@ public final class ProjectListView extends VBox {
                     case NOT_DIRECTORY -> "项目路径存在，但不是目录。";
                 };
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, message + "\n路径：" + selected.path());
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("Working Tree 状态");
                 if (!task.getValue().files().isEmpty()) {
                     TableView<GitWorkingTreeReader.FileChange> changes = new TableView<>();
@@ -389,7 +390,7 @@ public final class ProjectListView extends VBox {
                 workingTreeButton.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法获取 Working Tree 状态。原因：" + GitException.userMessage(task.getException()));
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("获取 Working Tree 状态失败");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -400,11 +401,11 @@ public final class ProjectListView extends VBox {
         });
 
         getChildren().addAll(title, description, storageStatus,
-                new HBox(12, addButton, renameButton, removeButton, selectButton, checkPathButton),
-                new HBox(12, openButton, terminalButton, ideaButton, checkGitButton),
-                new HBox(12, createEditorButton(table, ProjectEditorOpener.Editor.VS_CODE),
+                new javafx.scene.layout.FlowPane(12, 12, addButton, renameButton, removeButton, selectButton, checkPathButton),
+                new javafx.scene.layout.FlowPane(12, 12, openButton, terminalButton, ideaButton, checkGitButton),
+                new javafx.scene.layout.FlowPane(12, 12, createEditorButton(table, ProjectEditorOpener.Editor.VS_CODE),
                         createEditorButton(table, ProjectEditorOpener.Editor.CURSOR), branchButton),
-                new HBox(12, workingTreeButton), table);
+                new javafx.scene.layout.FlowPane(12, 12, workingTreeButton), table);
         setAlignment(Pos.TOP_LEFT);
         setMinWidth(0);
         setPadding(new Insets(24));
@@ -426,7 +427,7 @@ public final class ProjectListView extends VBox {
             } catch (IOException | SecurityException exception) {
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法用 " + editor.displayName() + " 打开项目。原因：" + exception.getMessage());
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setTitle("打开失败");
                 alert.setHeaderText(null);
                 alert.showAndWait();
@@ -442,6 +443,7 @@ public final class ProjectListView extends VBox {
     private boolean saveChanges(List<Project> before) {
         try {
             store.save(projects.projects());
+            Ui.toast(this, "项目列表已保存。");
             currentProject.synchronize(projects.projects());
             onCurrentProjectChanged.accept(currentProject.project());
             return true;
@@ -449,7 +451,7 @@ public final class ProjectListView extends VBox {
             projects.replaceAll(before);
             Alert alert = new Alert(Alert.AlertType.ERROR,
                     "项目列表保存失败，本次修改未生效。原因：" + exception.getMessage());
-            alert.initOwner(getScene().getWindow());
+            Ui.dialog(alert, this);
             alert.setTitle("保存失败");
             alert.setHeaderText(null);
             alert.showAndWait();

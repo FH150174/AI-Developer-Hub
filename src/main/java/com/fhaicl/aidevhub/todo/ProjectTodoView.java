@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.todo;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import com.fhaicl.aidevhub.project.Project;
 import javafx.concurrent.Task;
 import javafx.beans.property.BooleanProperty;
@@ -11,14 +12,12 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ChoiceDialog;
-import javafx.scene.layout.HBox;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 import java.io.IOException;
 import java.util.List;
@@ -46,10 +45,13 @@ public final class ProjectTodoView extends VBox {
         setPadding(new Insets(24));
         setMinWidth(0);
         Label title = new Label("TODO");
-        title.setFont(Font.font(24));
+        title.getStyleClass().add("page-title");
         projectLabel.setWrapText(true);
         status.setWrapText(true);
-        items.setPlaceholder(emptyState);
+        emptyState.setWrapText(true);
+        VBox placeholder = Ui.empty("待办清单", "在 Projects 选择当前项目，然后点击“添加任务”。");
+        placeholder.getChildren().add(emptyState);
+        items.setPlaceholder(placeholder);
         items.setEditable(false);
         items.setCellFactory(view -> new ListCell<>() {
             @Override
@@ -60,6 +62,8 @@ public final class ProjectTodoView extends VBox {
         });
         VBox.setVgrow(items, Priority.ALWAYS);
         Button add = new Button("添加任务");
+        add.getStyleClass().add("primary");
+        add.setGraphic(Ui.icon("TODO"));
         Button complete = new Button("完成 / 取消完成");
         Button delete = new Button("删除任务");
         add.disableProperty().bind(ready.not());
@@ -78,8 +82,8 @@ public final class ProjectTodoView extends VBox {
         order.setValue(TodoOrder.PRIORITY);
         order.setOnAction(event -> render(snapshot, selectedSourceIndex()));
         getChildren().addAll(title, projectLabel, status,
-                new HBox(12, new Label("新任务优先级："), newPriority, add, complete, delete, priority),
-                new HBox(12, new Label("排序："), order), items);
+                new javafx.scene.layout.FlowPane(12, 12, new Label("新任务优先级："), newPriority, add, complete, delete, priority),
+                new javafx.scene.layout.FlowPane(12, 12, new Label("排序："), order), items);
         setProject(null);
     }
 
@@ -138,7 +142,7 @@ public final class ProjectTodoView extends VBox {
         Project selected = project;
         List<TodoItem> before = List.copyOf(snapshot);
         TextInputDialog dialog = new TextInputDialog();
-        dialog.initOwner(getScene().getWindow());
+        Ui.dialog(dialog, this);
         dialog.setTitle("添加任务");
         dialog.setHeaderText("项目：" + selected.name());
         dialog.setContentText("任务标题：");
@@ -170,7 +174,7 @@ public final class ProjectTodoView extends VBox {
         if (deleting) {
             Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
                     "确定删除任务“" + before.get(index).title() + "”？", ButtonType.OK, ButtonType.CANCEL);
-            confirmation.initOwner(getScene().getWindow());
+            Ui.dialog(confirmation, this);
             confirmation.setTitle("删除任务");
             confirmation.setHeaderText("项目：" + selected.name());
             if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
@@ -187,6 +191,7 @@ public final class ProjectTodoView extends VBox {
 
     private void showSaved(List<TodoItem> updated, int index) {
         render(updated, index);
+        Ui.toast(this, "TODO 已保存。");
         status.setText("TODO 已保存：" + updated.size() + " 项");
     }
 
@@ -210,7 +215,7 @@ public final class ProjectTodoView extends VBox {
         Project selected = project;
         List<TodoItem> before = List.copyOf(snapshot);
         ChoiceDialog<TodoItem.Priority> dialog = new ChoiceDialog<>(before.get(index).priority(), TodoItem.Priority.values());
-        dialog.initOwner(getScene().getWindow());
+        Ui.dialog(dialog, this);
         dialog.setTitle("设置优先级");
         dialog.setHeaderText(before.get(index).title());
         dialog.setContentText("优先级：");

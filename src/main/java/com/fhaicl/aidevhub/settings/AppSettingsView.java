@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.settings;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import java.io.IOException;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
@@ -8,6 +9,7 @@ import javafx.stage.DirectoryChooser;
 public final class AppSettingsView extends VBox {
     public AppSettingsView(AppSettings settings, Runnable applyTheme, String loadError) {
         super(12);
+        getStyleClass().add("settings-section");
         Label status = new Label(loadError);
         status.setWrapText(true);
         ComboBox<AppSettings.Terminal> terminal = new ComboBox<>();
@@ -39,11 +41,13 @@ public final class AppSettingsView extends VBox {
         startPage.getItems().setAll(AppSettings.StartPage.values());
         startPage.setValue(settings.values().startPage());
         Button save = new Button("保存应用设置");
+        save.getStyleClass().add("primary");
         save.setOnAction(event -> {
             try {
                 settings.save(new AppSettings.Values(terminal.getValue(), directory.getText(), theme.getValue(), startPage.getValue()));
                 directory.setText(settings.values().projectDirectory());
                 applyTheme.run();
+                Ui.toast(this, "应用设置已保存。");
                 status.setText("已保存。终端、目录与主题立即生效；启动首页在下次启动生效。");
             } catch (IOException | SecurityException exception) {
                 status.setText("保存失败：" + exception.getMessage());

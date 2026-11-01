@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.dashboard;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import com.fhaicl.aidevhub.settings.AppSettings;
 import com.fhaicl.aidevhub.project.Project;
 import com.fhaicl.aidevhub.project.ProjectDirectoryOpener;
@@ -21,7 +22,6 @@ import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -49,7 +49,7 @@ public final class DashboardView extends VBox {
         setPadding(new Insets(24));
         setMinWidth(0);
         Label title = new Label("Dashboard");
-        title.setFont(Font.font(24));
+        title.getStyleClass().add("page-title");
         projectLabel.setWrapText(true);
         incomplete.setWrapText(true);
         latestLog.setWrapText(true);
@@ -63,8 +63,21 @@ public final class DashboardView extends VBox {
                 .open(project, settings.requirePath(IdePathSettings.Ide.VS_CODE)));
         addLauncher("打开 Cursor", () -> new ProjectEditorOpener(ProjectEditorOpener.Editor.CURSOR)
                 .open(project, settings.requirePath(IdePathSettings.Ide.CURSOR)));
-        getChildren().addAll(title, refresh, projectCount, projectLabel, launchers,
-                branch, changes, commit, incomplete, latestLog);
+        refresh.setGraphic(Ui.icon("Dashboard"));
+        VBox overview = Ui.card("工作概览", projectCount, projectLabel, launchers);
+        javafx.scene.layout.GridPane metrics = new javafx.scene.layout.GridPane();
+        metrics.setHgap(16);
+        metrics.setVgap(16);
+        for (int i = 0; i < 2; i++) {
+            javafx.scene.layout.ColumnConstraints column = new javafx.scene.layout.ColumnConstraints();
+            column.setPercentWidth(50);
+            metrics.getColumnConstraints().add(column);
+        }
+        metrics.add(Ui.card("当前分支", branch), 0, 0);
+        metrics.add(Ui.card("工作区", changes), 1, 0);
+        metrics.add(Ui.card("最近提交", commit), 0, 1);
+        metrics.add(Ui.card("待办事项", incomplete), 1, 1);
+        getChildren().addAll(title, refresh, overview, metrics, Ui.card("最近开发日志", latestLog));
         setProject(null);
     }
 
@@ -166,13 +179,15 @@ public final class DashboardView extends VBox {
 
     private void addLauncher(String title, LaunchAction action) {
         Button button = new Button(title);
+        button.setGraphic(Ui.icon("launch"));
         button.setOnAction(event -> {
             if (project == null) return;
             try {
                 action.run();
+                Ui.toast(this, "已发送" + title + "请求。");
             } catch (IOException | SecurityException exception) {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "启动失败：" + exception.getMessage());
-                alert.initOwner(getScene().getWindow());
+                Ui.dialog(alert, this);
                 alert.setHeaderText(title + "失败");
                 alert.showAndWait();
             }

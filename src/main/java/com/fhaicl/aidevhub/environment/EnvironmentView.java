@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.environment;
 
+import com.fhaicl.aidevhub.ui.Ui;
 import javafx.concurrent.Task;
 import com.fhaicl.aidevhub.settings.IdePathSettings;
 import java.util.concurrent.Callable;
@@ -10,7 +11,6 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -33,7 +33,7 @@ public final class EnvironmentView extends VBox {
         setPadding(new Insets(24));
         setMinWidth(0);
         Label title = new Label("Environment");
-        title.setFont(Font.font(24));
+        title.getStyleClass().add("page-title");
         Label scope = new Label("检测应用继承的 PATH 中的工具版本。Java 为 java 命令版本，可能与运行本应用的 JDK 不同。修改环境变量后请重启应用。");
         scope.setWrapText(true);
         Button refresh = new Button("刷新环境信息");
@@ -43,13 +43,13 @@ public final class EnvironmentView extends VBox {
             Label label = new Label(tool.displayName() + "：尚未检测");
             label.setWrapText(true);
             labels.put(tool, label);
-            getChildren().add(label);
+            getChildren().add(Ui.card(tool.displayName(), label));
         }
         for (var ide : IdePathSettings.Ide.values()) {
             Label label = new Label(ide.displayName() + " 路径：尚未检测");
             label.setWrapText(true);
             ideLabels.put(ide, label);
-            getChildren().add(label);
+            getChildren().add(Ui.card(ide.displayName(), label));
         }
         wsl.setWrapText(true);
         pathReport.setEditable(false);
