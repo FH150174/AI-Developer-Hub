@@ -1,5 +1,7 @@
 package com.fhaicl.aidevhub.navigation;
 
+import com.fhaicl.aidevhub.settings.AppSettings;
+import com.fhaicl.aidevhub.settings.AppSettingsView;
 import com.fhaicl.aidevhub.project.ProjectListView;
 import com.fhaicl.aidevhub.agent.AgentsView;
 import com.fhaicl.aidevhub.agent.AgentPathSettings;
@@ -36,9 +38,22 @@ import java.util.Map;
 public final class MainView extends BorderPane {
 
     public MainView() {
+        AppSettings appSettings = new AppSettings(
+                Path.of(System.getProperty("user.home"), ".aidevhub", "settings.xml"));
+        String loadError = "";
+        try {
+            appSettings.load();
+        } catch (java.io.IOException | SecurityException exception) {
+            loadError = "应用设置加载失败，已禁用保存。请检查 .aidevhub/settings.xml 后重启：" + exception.getMessage();
+        }
+        Runnable applyTheme = () -> setStyle(appSettings.values().theme() == AppSettings.Theme.DARK
+                ? "-fx-base: #292d32; -fx-background: #202328; -fx-control-inner-background: #292d32; -fx-accent: #568ad6; -fx-text-base-color: #eeeeee;"
+                : "");
+        applyTheme.run();
         IdePathSettings ideSettings = new IdePathSettings(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "ide-paths.xml"));
         IdeSettingsView settingsView = new IdeSettingsView(ideSettings);
+        settingsView.getChildren().add(0, new AppSettingsView(appSettings, applyTheme, loadError));
         AgentPathSettings agentSettings = new AgentPathSettings(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "agent-paths.xml"));
         settingsView.getChildren().add(new AgentSettingsView(agentSettings));
@@ -48,7 +63,7 @@ public final class MainView extends BorderPane {
         ProjectTodoStore todoStore = new ProjectTodoStore(
                 Path.of(System.getProperty("user.home"), ".aidevhub", "todos"));
         ProjectTodoView todoView = new ProjectTodoView(todoStore);
-        DashboardView dashboardView = new DashboardView(new ProjectTodoService(todoStore), logStore, ideSettings);
+        DashboardView dashboardView = new DashboardView(new ProjectTodoService(todoStore), logStore, ideSettings, appSettings);
         Label currentProject = new Label("未选择项目");
         GitBranchView branchView = new GitBranchView();
         GitLatestCommitView commitView = new GitLatestCommitView();
@@ -67,7 +82,7 @@ public final class MainView extends BorderPane {
         AgentsView agentsView = new AgentsView(agentSettings);
         Map<String, VBox> pages = new LinkedHashMap<>();
         pages.put("Dashboard", dashboardView);
-        ProjectListView projectsView = new ProjectListView(ideSettings, project -> {
+        ProjectListView projectsView = new ProjectListView(ideSettings, appSettings, project -> {
             refreshButton.setDisable(project == null);
             currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name());
             branchView.setProject(project);
@@ -126,7 +141,7 @@ public final class MainView extends BorderPane {
                         }
                     }
                 });
-        navigation.getSelectionModel().selectFirst();
+        navigation.getSelectionModel().select(appSettings.values().startPage().name());
     }
 
     private static VBox createPage(String title, String summary) {

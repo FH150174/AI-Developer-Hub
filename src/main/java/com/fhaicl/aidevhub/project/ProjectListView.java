@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.project;
 
+import com.fhaicl.aidevhub.settings.AppSettings;
 import com.fhaicl.aidevhub.git.GitRepositoryChecker;
 import com.fhaicl.aidevhub.git.GitException;
 import com.fhaicl.aidevhub.git.GitBranchReader;
@@ -38,7 +39,7 @@ public final class ProjectListView extends VBox {
     private final Consumer<Project> onCurrentProjectChanged;
     private final IdePathSettings ideSettings;
 
-    public ProjectListView(IdePathSettings ideSettings, Consumer<Project> onCurrentProjectChanged) {
+    public ProjectListView(IdePathSettings ideSettings, AppSettings appSettings, Consumer<Project> onCurrentProjectChanged) {
         super(12);
         this.ideSettings = java.util.Objects.requireNonNull(ideSettings);
         this.onCurrentProjectChanged = java.util.Objects.requireNonNull(onCurrentProjectChanged);
@@ -76,6 +77,10 @@ public final class ProjectListView extends VBox {
         addButton.setOnAction(event -> {
             DirectoryChooser chooser = new DirectoryChooser();
             chooser.setTitle("选择本地项目目录");
+            String initial = appSettings.values().projectDirectory();
+            if (!initial.isEmpty() && java.nio.file.Files.isDirectory(Path.of(initial))) {
+                chooser.setInitialDirectory(Path.of(initial).toFile());
+            }
             File directory = chooser.showDialog(getScene().getWindow());
             if (directory == null) {
                 return;
@@ -176,7 +181,7 @@ public final class ProjectListView extends VBox {
                 return;
             }
             try {
-                terminalOpener.open(selected);
+                terminalOpener.open(selected, appSettings.values().terminal());
             } catch (IOException | SecurityException exception) {
                 Alert alert = new Alert(Alert.AlertType.ERROR,
                         "无法打开终端。原因：" + exception.getMessage());

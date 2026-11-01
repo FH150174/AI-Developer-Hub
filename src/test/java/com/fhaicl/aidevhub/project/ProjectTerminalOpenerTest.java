@@ -24,7 +24,7 @@ class ProjectTerminalOpenerTest {
         opener.open(new Project("project", projectPath.resolve(".")));
 
         assertEquals(projectPath.toAbsolutePath().normalize().toFile(), started.get().directory());
-        assertEquals(List.of("cmd.exe", "/d", "/c", "start", "\"\"", "cmd.exe", "/d", "/k"),
+        assertEquals(List.of("cmd.exe", "/d", "/c", "start", "\"\"", "pwsh.exe", "-NoExit"),
                 started.get().command());
     }
 
@@ -52,6 +52,20 @@ class ProjectTerminalOpenerTest {
 
         assertSame(failure, assertThrows(IOException.class,
                 () -> opener.open(new Project("project", directory))));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(com.fhaicl.aidevhub.settings.AppSettings.Terminal.class)
+    void usesSelectedTerminal(com.fhaicl.aidevhub.settings.AppSettings.Terminal terminal) throws IOException {
+        AtomicReference<ProcessBuilder> started = new AtomicReference<>();
+        new ProjectTerminalOpener("Windows 11", started::set).open(new Project("project", directory), terminal);
+        var expected = switch (terminal) {
+            case POWERSHELL_7 -> List.of("cmd.exe", "/d", "/c", "start", "\"\"", "pwsh.exe", "-NoExit");
+            case WINDOWS_POWERSHELL -> List.of("cmd.exe", "/d", "/c", "start", "\"\"", "powershell.exe", "-NoExit");
+            case CMD -> List.of("cmd.exe", "/d", "/c", "start", "\"\"", "cmd.exe", "/d", "/k");
+        };
+        assertEquals(expected, started.get().command());
+        assertEquals(directory.toFile(), started.get().directory());
     }
 
     @Test

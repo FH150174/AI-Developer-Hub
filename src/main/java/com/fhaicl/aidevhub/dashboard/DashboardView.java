@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.dashboard;
 
+import com.fhaicl.aidevhub.settings.AppSettings;
 import com.fhaicl.aidevhub.project.Project;
 import com.fhaicl.aidevhub.project.ProjectDirectoryOpener;
 import com.fhaicl.aidevhub.project.ProjectTerminalOpener;
@@ -40,7 +41,7 @@ public final class DashboardView extends VBox {
     private Project project;
     private Task<Long> activeTask;
 
-    public DashboardView(ProjectTodoService todos, ProjectLogStore logs, IdePathSettings settings) {
+    public DashboardView(ProjectTodoService todos, ProjectLogStore logs, IdePathSettings settings, AppSettings appSettings) {
         super(12);
         this.todos = Objects.requireNonNull(todos);
         this.logs = new ProjectLogService(Objects.requireNonNull(logs));
@@ -55,7 +56,7 @@ public final class DashboardView extends VBox {
         Button refresh = new Button("刷新 Dashboard");
         refresh.setOnAction(event -> refresh());
         addLauncher("打开目录", () -> new ProjectDirectoryOpener().open(project));
-        addLauncher("打开终端", () -> new ProjectTerminalOpener().open(project));
+        addLauncher("打开终端", () -> new ProjectTerminalOpener().open(project, appSettings.values().terminal()));
         addLauncher("打开 IDEA", () -> new ProjectIdeaOpener().open(project,
                 settings.requirePath(IdePathSettings.Ide.IDEA)));
         addLauncher("打开 VS Code", () -> new ProjectEditorOpener(ProjectEditorOpener.Editor.VS_CODE)

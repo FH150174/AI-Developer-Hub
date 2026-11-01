@@ -1,5 +1,6 @@
 package com.fhaicl.aidevhub.project;
 
+import com.fhaicl.aidevhub.settings.AppSettings;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,6 +27,11 @@ public final class ProjectTerminalOpener {
     }
 
     public void open(Project project) throws IOException {
+        open(project, AppSettings.Terminal.POWERSHELL_7);
+    }
+
+    public void open(Project project, AppSettings.Terminal terminal) throws IOException {
+        Objects.requireNonNull(terminal);
         Objects.requireNonNull(project, "Project must not be null");
         if (!operatingSystem.toLowerCase(Locale.ROOT).startsWith("windows")) {
             throw new IOException("当前仅支持在 Windows 上打开终端。");
@@ -38,8 +44,16 @@ public final class ProjectTerminalOpener {
         if (directory.toString().startsWith("\\\\")) {
             throw new IOException("CMD 不支持 UNC 网络路径作为工作目录，请使用本地项目目录。");
         }
-        ProcessBuilder builder = new ProcessBuilder(List.of(
-                "cmd.exe", "/d", "/c", "start", "\"\"", "cmd.exe", "/d", "/k"));
+        String executable = switch (terminal) {
+            case POWERSHELL_7 -> "pwsh.exe";
+            case WINDOWS_POWERSHELL -> "powershell.exe";
+            case CMD -> "cmd.exe";
+        };
+        java.util.ArrayList<String> command = new java.util.ArrayList<>(List.of(
+                "cmd.exe", "/d", "/c", "start", "\"\"", executable));
+        command.addAll(terminal == AppSettings.Terminal.CMD
+                ? List.of("/d", "/k") : List.of("-NoExit"));
+        ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(directory.toFile());
         starter.start(builder);
     }
