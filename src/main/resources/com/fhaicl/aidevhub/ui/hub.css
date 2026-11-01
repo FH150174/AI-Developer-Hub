@@ -97,3 +97,5 @@
 .hub .button.primary:hover .hub-icon, .hub .button:default:hover .hub-icon { -fx-stroke: -hub-text; }
 .hub .combo-box > .list-cell { -fx-background-color: transparent; -fx-padding: 2 4; }
 .hub .text { -fx-font-smoothing-type: gray; }
+
+.hub .version-badge { -fx-text-fill: -hub-muted; -fx-font-size: 12px; -fx-background-color: -hub-hover; -fx-background-radius: 5; -fx-padding: 3 8; }

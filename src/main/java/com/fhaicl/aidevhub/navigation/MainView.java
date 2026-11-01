@@ -127,9 +127,11 @@ public final class MainView extends BorderPane {
         navigation.setMinWidth(180);
 
         Label currentPage = new Label();
-        Label brand = new Label("AI Developer Hub");
+        Label brand = new Label(com.fhaicl.aidevhub.ui.AppIdentity.NAME);
         brand.getStyleClass().add("brand");
-        setTop(new ToolBar(brand, new Separator(), currentPage,
+        Label version = new Label(com.fhaicl.aidevhub.ui.AppIdentity.version());
+        version.getStyleClass().add("version-badge");
+        setTop(new ToolBar(brand, version, new Separator(), currentPage,
                 new Separator(), currentProject));
         setLeft(navigation);
 

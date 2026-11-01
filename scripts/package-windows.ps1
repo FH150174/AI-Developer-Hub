@@ -25,6 +25,9 @@ if ($jdkRelease -notmatch 'OS_ARCH="(?:x86_64|amd64)"') {
 }
 $maven = (Get-Command $MavenCommand -ErrorAction Stop).Source
 [xml]$pom = Get-Content -LiteralPath (Join-Path $projectRoot 'pom.xml') -Raw -Encoding UTF8
+$appName = [string]$pom.project.name
+$icon = Join-Path $projectRoot 'packaging/windows/ai-developer-hub.ico'
+if (!(Test-Path -LiteralPath $icon)) { throw 'Application ICO is missing. Run scripts/GenerateAppIcon.java first.' }
 if (!$AppVersion) { $AppVersion = $pom.project.version -replace '-SNAPSHOT$', '' }
 if ($AppVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Specify a numeric -AppVersion such as 0.1.0.' }
 
@@ -83,19 +86,20 @@ try {
         }
     }
     $imageDestination = Join-Path $destination 'image'
-    Invoke-BuildTool $jpackage @('--type', 'app-image', '--name', 'AI Developer Hub',
-        '--app-version', $AppVersion, '--vendor', 'FHAICL',
+    Invoke-BuildTool $jpackage @('--type', 'app-image', '--name', $appName,
+        '--app-version', $AppVersion, '--vendor', 'FHAICL', '--icon', $icon,
         '--description', 'Windows desktop toolbox for personal development projects',
         '--input', $inputDirectory, '--main-jar', $jarName,
         '--main-class', 'com.fhaicl.aidevhub.AiDeveloperHubApplication',
         '--dest', $imageDestination,
         '--add-modules', 'java.desktop,java.logging,java.xml,jdk.unsupported',
         '--java-options', '--module-path=$APPDIR/lib', '--java-options', '--add-modules=javafx.controls')
-    $image = Join-Path $imageDestination 'AI Developer Hub'
+    $image = Join-Path $imageDestination $appName
     if ($Type -eq 'exe') {
-        Invoke-BuildTool $jpackage @('--type', 'exe', '--name', 'AI Developer Hub', '--app-version', $AppVersion,
-            '--vendor', 'FHAICL', '--app-image', $image, '--dest', $destination,
-            '--win-per-user-install', '--win-dir-chooser', '--win-menu', '--win-menu-group', 'AI Developer Hub',
+        Invoke-BuildTool $jpackage @('--type', 'exe', '--name', $appName, '--app-version', $AppVersion,
+            '--vendor', 'FHAICL', '--icon', $icon, '--app-image', $image, '--dest', $destination,
+            '--install-dir', $appName, '--temp', (Join-Path $work 'installer'),
+            '--win-per-user-install', '--win-dir-chooser', '--win-menu', '--win-menu-group', $appName,
             '--win-shortcut', '--win-shortcut-prompt', '--win-upgrade-uuid', 'b8cb99bf-8c97-4a67-b062-41769e2902dd')
     }
     $hashLines = foreach ($artifact in Get-ChildItem -LiteralPath $destination -Filter '*.exe') {
@@ -110,7 +114,11 @@ try {
         }
     }
     if ($hashLines) { $hashLines | Set-Content -LiteralPath (Join-Path $destination 'SHA256SUMS.txt') -Encoding ASCII }
-    @("Version: $AppVersion", "JDK: $jdk", "Application image: $image", "Type: $Type",
+    @("Application: $appName", "Version: $AppVersion", "Icon: $icon", "JDK: $jdk",
+        "Default install directory: %LOCALAPPDATA%\$appName (per-user; selectable)",
+        'Uninstall: Windows Settings > Apps > Installed apps; user data is separate.',
+        'Runtime bundled: Java 21 runtime image and JavaFX; no external JRE required.',
+        "Installer work: $work/installer", "Application image: $image", "Type: $Type",
         "Tests skipped: $SkipTests", 'Upgrade UUID: b8cb99bf-8c97-4a67-b062-41769e2902dd') |
         Set-Content -LiteralPath (Join-Path $destination 'build-info.txt') -Encoding UTF8
     Write-Output "Application image: $image"

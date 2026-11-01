@@ -11,7 +11,8 @@ public final class AiDeveloperHubApplication extends Application {
 
     @Override
     public void start(Stage stage) {
-        stage.setTitle("AI Developer Hub");
+        stage.setTitle(com.fhaicl.aidevhub.ui.AppIdentity.NAME);
+        stage.getIcons().addAll(com.fhaicl.aidevhub.ui.AppIdentity.icons());
         java.nio.file.Path dataDirectory;
         try {
             dataDirectory = AppDataDirectory.initialize();

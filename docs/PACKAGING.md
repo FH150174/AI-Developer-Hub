@@ -1,4 +1,4 @@
-# Windows 打包（TASK-058）
+# Windows 打包（TASK-058 / TASK-059）
 
 使用 JDK 21 的 `jpackage` 生成带 Java 运行时和 JavaFX 的应用目录，再由该目录生成 `.exe` 安装包。打包不修改 `pom.xml`、应用数据格式或版本控制记录。
 
@@ -63,9 +63,9 @@ JavaFX 实现模块在 `app/lib/`，通过相对 `$APPDIR` 的 module path 加�
 
 ## 安装与数据
 
-安装器采用当前用户安装，提供安装目录选择、开始菜单与桌面快捷方式选项。产物未进行代码签名，也不由脚本自动安装或发布。
+安装器采用当前用户安装，默认目录为 `%LOCALAPPDATA%\AI Developer Hub\`，通过 `--install-dir` 明确指定相对目录名，并提供安装目录选择、开始菜单与桌面快捷方式选项。应用名称沿用 `AI Developer Hub`，安装器从 POM 的 `name` 读取；窗口和界面的名称由 `AppIdentity.NAME` 定义，测试检查两者一致。产物未进行代码签名，也不由脚本自动安装或发布。
 
-用户无需额外安装 Java 或 JavaFX。Git、IDE、Maven、Node.js、Agent CLI 等外部开发工具仍由用户安装和配置。
+**附带运行时：是。** `runtime/` 是从 JDK 21 裁剪出来的应用专用 Java 运行时（JRE 功能），包含启动应用需要的 JDK 模块；JavaFX Windows 模块放在 `app/lib/`。它不是完整开发 JDK，也不注册系统 Java 或修改全局 JAVA_HOME/PATH。用户无需额外安装 Java 或 JavaFX。Git、IDE、Maven、Node.js、Agent CLI 等外部开发工具仍由用户安装和配置。
 
 用户数据继续保存在 `%APPDATA%\AI-Developer-Hub\`，与安装目录分离。旧 `.aidevhub` 数据在首次正常启动时按 TASK-053 规则迁移；打包过程本身不读取、迁移或删除真实用户数据。安装/卸载验收应特别确认已有数据的保留情况。
 
@@ -80,3 +80,24 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 该脚本会短暂打开打包后的真实主窗口，再请求正常关闭。它给子进程提供隔离的 APPDATA 和 Java user.home，将 PATH 限制为 Windows 系统目录，验证无需 PATH 中的 Java 也能启动；不会使用真实配置、迁移真实数据或安装应用。诊断输出位于 `target/package-smoke/`。
 
 人工验收仍包括：在目标 Windows 机器上运行安装器，检查安装目录和快捷方式、从安装目录启动、读取与保存数据、退出、升级和卸载。启动冒烟通过不代表已经验证完整安装/卸载流程。
+
+## 应用图标与版本
+
+- 窗口、任务栏、启动器及安装器使用同一蓝色 Hub 图形。Windows ICO 位于 `packaging/windows/ai-developer-hub.ico`，包含 16、32、48、64、128、256 六种尺寸；JavaFX 窗口使用资源目录中对应的 PNG。
+- 图形的可再现源代码位于 `scripts/GenerateAppIcon.java`，不依赖外部图片、字体或第三方图像工具。需要调整图形时，从项目根目录运行：
+
+```powershell
+& "$env:JAVA_HOME\bin\java.exe" -Djava.awt.headless=true .\scripts\GenerateAppIcon.java
+```
+
+日常打包直接使用已保存的图标资源，无需重新生成。
+
+安装器与启动器版本默认为 **0.1.0**；界面顶部读取 jpackage 的 `jpackage.app-version` 属性显示实际包版本，`-AppVersion` 覆盖也会同步到界面。从 IDE 启动时显示“开发版”，避免将源码开发状态误报为已安装版本。
+
+## 卸载与数据保留
+
+在 Windows 设置的应用列表中找到 **AI Developer Hub**，选择“卸载”，由 Windows Installer 执行；也可使用控制面板的程序卸载入口。请先正常退出应用。
+
+安装器负责移除应用安装目录中的程序、附带运行时和安装时创建的快捷方式。用户的 `%APPDATA%\AI-Developer-Hub\` 数据位于独立的 Roaming 目录，不作为安装文件打包；旧 `.aidevhub` 备份同样不纳入卸载文件清单。需要清空用户数据时，由用户先备份，再自行处理这些目录，本项目不提供自动删除数据的卸载钩子。
+
+构建时通过 `--temp` 保留生成的 WiX/MSI 中间文件，目录记录在 `build-info.txt`，可只读检查产品名称、版本、安装目录、图标及卸载属性。元数据验证不等于在用户系统实际执行安装/卸载；完整安装、升级、卸载和数据保留仍需本地验收。
