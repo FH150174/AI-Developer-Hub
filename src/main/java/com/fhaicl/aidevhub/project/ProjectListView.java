@@ -32,15 +32,15 @@ import javafx.beans.property.SimpleBooleanProperty;
 
 public final class ProjectListView extends VBox {
     private final ProjectList projects = new ProjectList();
-    private final ProjectStore store = new ProjectStore(
-            Path.of(System.getProperty("user.home"), ".aidevhub", "projects.xml"));
+    private final ProjectStore store;
     private final BooleanProperty loadFailed = new SimpleBooleanProperty(false);
     private final CurrentProject currentProject = new CurrentProject();
     private final Consumer<Project> onCurrentProjectChanged;
     private final IdePathSettings ideSettings;
 
-    public ProjectListView(IdePathSettings ideSettings, AppSettings appSettings, Consumer<Project> onCurrentProjectChanged) {
+    public ProjectListView(IdePathSettings ideSettings, AppSettings appSettings, Path projectsFile, Consumer<Project> onCurrentProjectChanged) {
         super(12);
+        this.store = new ProjectStore(projectsFile);
         this.ideSettings = java.util.Objects.requireNonNull(ideSettings);
         this.onCurrentProjectChanged = java.util.Objects.requireNonNull(onCurrentProjectChanged);
         Label title = new Label("Projects");
@@ -57,7 +57,7 @@ public final class ProjectListView extends VBox {
             table.getItems().setAll(projects.projects());
         } catch (IOException | SecurityException exception) {
             loadFailed.set(true);
-            storageStatus.setText("项目列表加载失败，已禁用编辑以保护原文件。请检查用户目录下的 .aidevhub/projects.xml 后重启。原因："
+            storageStatus.setText("项目列表加载失败，已禁用编辑以保护原文件。请检查 " + projectsFile + " 后重启。原因："
                     + exception.getMessage());
         }
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);

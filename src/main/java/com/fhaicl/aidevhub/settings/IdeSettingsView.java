@@ -31,7 +31,7 @@ public final class IdeSettingsView extends VBox {
         try {
             settings.load();
         } catch (IOException | SecurityException exception) {
-            status.setText("IDE 配置加载失败，已禁用保存以保护原文件。请检查用户目录下的 .aidevhub/ide-paths.xml 后重启。原因："
+            status.setText("IDE 配置加载失败，已禁用保存以保护原文件。请检查 %APPDATA%/AI-Developer-Hub/ide-paths.xml 后重启。原因："
                     + exception.getMessage());
             form.setDisable(true);
         }

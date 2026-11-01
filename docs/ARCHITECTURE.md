@@ -66,3 +66,14 @@ Infrastructure
 - [需求](REQUIREMENTS.md)
 - [开发流程](DEVELOPMENT.md)
 - [路线图](ROADMAP.md)
+
+## TASK-053 本地数据目录
+
+应用启动时由 `storage.AppDataDirectory` 统一准备数据根目录，UI 将其下的文件路径传给现有 Store / Settings，领域模型和存储格式保持不变。
+
+- 首选 `%APPDATA%\AI-Developer-Hub\`；`APPDATA` 未设置时使用 `${user.home}\AppData\Roaming\AI-Developer-Hub\`。无效或相对的 `APPDATA` 路径会阻止启动。
+- 根目录保存 `settings.xml`、`ide-paths.xml`、`agent-paths.xml`、`projects.xml`；`notes/`、`todos/` 保存按项目路径散列命名的 XML 文件。沿用 JDK Properties XML，不新增 JSON 依赖。
+- 仅当新根目录不存在时，复制旧 `${user.home}/.aidevhub/` 下上述数据。先复制到同级临时目录，全部复制成功后才发布新根目录；失败时清理本次临时副本并停止启动，保留旧数据。
+- 新根目录存在时以其为准，不合并、不覆盖、不补回已删除的数据。旧目录保留作为迁移前备份；切换后旧版本与新版本的数据不会同步。
+- 迁移不转换或修复文件内容。损坏文件继续由各 Store / Settings 的校验和界面错误提示处理；不迁移临时文件或无关文件，不跟随数据文件及数据根目录的符号链接。
+- 该流程在用户运行应用时执行，开发测试只使用临时测试目录。

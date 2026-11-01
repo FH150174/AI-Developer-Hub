@@ -34,7 +34,7 @@ public final class AgentSettingsView extends VBox {
         try {
             settings.load();
         } catch (IOException | SecurityException exception) {
-            status.setText("Agent 配置加载失败，已禁用保存以保护原文件。请检查用户目录下的 .aidevhub/agent-paths.xml 后重启。原因："
+            status.setText("Agent 配置加载失败，已禁用保存以保护原文件。请检查 %APPDATA%/AI-Developer-Hub/agent-paths.xml 后重启。原因："
                     + exception.getMessage());
             form.setDisable(true);
         }
