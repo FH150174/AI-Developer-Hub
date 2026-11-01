@@ -1,4 +1,4 @@
-# Windows 打包（TASK-058 / TASK-059）
+# Windows 打包（TASK-058 / TASK-059 / TASK-060）
 
 使用 JDK 21 的 `jpackage` 生成带 Java 运行时和 JavaFX 的应用目录，再由该目录生成 `.exe` 安装包。打包不修改 `pom.xml`、应用数据格式或版本控制记录。
 
@@ -36,7 +36,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-window
 默认输出到 `target/dist/<版本>-<时间>/`：
 
 ```text
-AI Developer Hub-0.1.0.exe       安装包
+AI Developer Hub-1.0.0.exe       安装包
 SHA256SUMS.txt                 安装包 SHA-256
 build-info.txt                构建工具与参数记录
 image/AI Developer Hub/        完整应用目录
@@ -47,7 +47,7 @@ image/AI Developer Hub/        完整应用目录
 
 `-OutputDirectory` 可指定尚不存在的输出目录。脚本拒绝覆盖已有输出，重试时使用新目录，不自动删除先前产物。中间文件保留在 `target/jpackage/`，可用于诊断构建失败。
 
-Maven 的 `0.1.0-SNAPSHOT` 默认转换为安装器版本 `0.1.0`，不修改 POM；可用 `-AppVersion 0.1.1` 显式指定数字版本。不同正式版本应递增安装器版本，并保持脚本中的升级 UUID 不变；同版本反复安装的行为需单独验收。
+首版名称为 **v1.0**，Maven 项目版本与默认 Windows 安装器版本统一为 `1.0.0`；可用 `-AppVersion 1.0.1` 显式指定后续数字版本。打包脚本不修改 POM；对于带 `-SNAPSHOT` 的开发版本仍会移除该后缀后生成数字安装器版本。不同正式版本应递增安装器版本，并保持脚本中的升级 UUID 不变；同版本反复安装的行为需单独验收。
 
 默认执行 `mvn package`（包含测试），随后复制 runtime scope 依赖并生成产物。`-SkipTests` 仅用于已有独立测试结果的本地打包迭代，不替代发布前验收。
 
@@ -92,7 +92,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 日常打包直接使用已保存的图标资源，无需重新生成。
 
-安装器与启动器版本默认为 **0.1.0**；界面顶部读取 jpackage 的 `jpackage.app-version` 属性显示实际包版本，`-AppVersion` 覆盖也会同步到界面。从 IDE 启动时显示“开发版”，避免将源码开发状态误报为已安装版本。
+安装器与启动器版本默认为 **1.0.0**；界面顶部读取 jpackage 的 `jpackage.app-version` 属性显示 **v1.0**。显示名称省略为零的末尾修订号，非零修订号保留（例如 `1.0.1` 显示为 `v1.0.1`）；`-AppVersion` 覆盖也会同步到界面。从 IDE 启动时显示“开发版”，避免将源码开发状态误报为已安装版本。
 
 ## 卸载与数据保留
 

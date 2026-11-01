@@ -6,7 +6,7 @@
 
     <groupId>com.fhaicl</groupId>
     <artifactId>ai-developer-hub</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>AI Developer Hub</name>
     <description>Windows desktop toolbox for personal development projects.</description>
 

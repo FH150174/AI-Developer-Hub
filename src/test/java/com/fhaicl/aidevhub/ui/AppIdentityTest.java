@@ -17,8 +17,10 @@ class AppIdentityTest {
         try {
             System.clearProperty("jpackage.app-version");
             assertEquals("开发版", AppIdentity.version());
-            System.setProperty("jpackage.app-version", "0.1.7");
-            assertEquals("0.1.7", AppIdentity.version());
+            System.setProperty("jpackage.app-version", "1.0.0");
+            assertEquals("v1.0", AppIdentity.version());
+            System.setProperty("jpackage.app-version", "1.0.1");
+            assertEquals("v1.0.1", AppIdentity.version());
         } finally {
             if (previous == null) System.clearProperty("jpackage.app-version");
             else System.setProperty("jpackage.app-version", previous);

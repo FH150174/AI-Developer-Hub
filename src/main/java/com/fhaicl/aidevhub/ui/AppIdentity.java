@@ -10,7 +10,9 @@ public final class AppIdentity {
 
     public static String version() {
         // jpackage supplies the actual installer version, including an explicit -AppVersion override.
-        return System.getProperty("jpackage.app-version", "开发版");
+        String version = System.getProperty("jpackage.app-version");
+        if (version == null) return "开发版";
+        return "v" + version.replaceFirst("\\.0$", "");
     }
 
     public static List<Image> icons() {

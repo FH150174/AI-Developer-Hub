@@ -29,7 +29,7 @@ $appName = [string]$pom.project.name
 $icon = Join-Path $projectRoot 'packaging/windows/ai-developer-hub.ico'
 if (!(Test-Path -LiteralPath $icon)) { throw 'Application ICO is missing. Run scripts/GenerateAppIcon.java first.' }
 if (!$AppVersion) { $AppVersion = $pom.project.version -replace '-SNAPSHOT$', '' }
-if ($AppVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Specify a numeric -AppVersion such as 0.1.0.' }
+if ($AppVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Specify a numeric -AppVersion such as 1.0.0.' }
 
 $savedPath = $env:PATH
 $savedJavaHome = $env:JAVA_HOME
