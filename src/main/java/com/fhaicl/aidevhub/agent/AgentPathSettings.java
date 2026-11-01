@@ -25,6 +25,9 @@ public final class AgentPathSettings {
         Properties data = new Properties();
         try (var input = Files.newInputStream(file)) {
             data.loadFromXML(input);
+        } catch (java.util.InvalidPropertiesFormatException exception) {
+            throw new IOException("Agent 配置文件损坏或格式不受支持（需要 XML，不能使用 JSON）。原文件已保留，请备份后检查或从备份恢复："
+                    + file, exception);
         } catch (NoSuchFileException exception) {
             paths = new EnumMap<>(AgentLauncher.Tool.class);
             commands = new EnumMap<>(AgentLauncher.Tool.class);

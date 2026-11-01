@@ -31,6 +31,7 @@ class GitCommandExecutorTest {
             assertEquals(directory.toAbsolutePath().toFile(), builder.directory());
             assertEquals("C", builder.environment().get("LC_ALL"));
             assertEquals("0", builder.environment().get("GIT_OPTIONAL_LOCKS"));
+            assertEquals("0", builder.environment().get("GIT_TERMINAL_PROMPT"));
             assertFalse(builder.environment().containsKey("GIT_DIR"));
             files[0] = builder.redirectOutput().file().toPath();
             files[1] = builder.redirectError().file().toPath();
@@ -54,7 +55,10 @@ class GitCommandExecutorTest {
             output[0] = builder.redirectOutput().file().toPath();
             throw cause;
         });
-        assertSame(cause, assertThrows(IOException.class, () -> executor.execute("--version")).getCause());
+        GitException reported = assertThrows(GitException.class, () -> executor.execute("--version"));
+        assertEquals(GitException.Kind.START_FAILED, reported.kind());
+        assertTrue(reported.getMessage().contains("PATH"));
+        assertSame(cause, reported.getCause());
         assertFalse(Files.exists(output[0]));
     }
 
@@ -64,6 +68,7 @@ class GitCommandExecutorTest {
         var executor = new GitCommandExecutor(Duration.ofMillis(1), builder -> process);
         assertTrue(assertThrows(IOException.class, () -> executor.execute("--version")).getMessage().contains("超时"));
         assertTrue(process.destroyed);
+        assertTrue(process.childDestroyed.get());
         assertFalse(process.isAlive());
     }
 
@@ -111,12 +116,40 @@ class GitCommandExecutorTest {
         assertTrue(failure.getSuppressed()[0].getMessage().contains("终止"));
     }
 
+    @Test
+    void realLongRunningCommandTimesOutAndReleasesRedirectedOutput() throws Exception {
+        Process[] started = new Process[1];
+        Path[] output = new Path[2];
+        var executor = new GitCommandExecutor(Duration.ofMillis(700), builder -> {
+            output[0] = builder.redirectOutput().file().toPath();
+            output[1] = builder.redirectError().file().toPath();
+            builder.command(com.fhaicl.aidevhub.support.SlowCommand.command());
+            started[0] = builder.start();
+            return started[0];
+        });
+        try {
+            assertTimeout(Duration.ofSeconds(5), () -> {
+                var failure = assertThrows(GitException.class, () -> executor.execute("--version"));
+                assertEquals(GitException.Kind.TIMEOUT, failure.kind());
+            });
+            assertFalse(started[0].isAlive());
+            assertFalse(Files.exists(output[0]));
+            assertFalse(Files.exists(output[1]));
+        } finally {
+            if (started[0] != null && started[0].isAlive()) started[0].destroyForcibly();
+        }
+    }
+
     private static final class StubProcess extends Process {
         private final int code;
         private boolean alive;
         private boolean destroyed;
         private boolean interrupt;
         private boolean refuseTermination;
+        private final java.util.concurrent.atomic.AtomicBoolean childDestroyed = new java.util.concurrent.atomic.AtomicBoolean();
+        @Override public java.util.stream.Stream<ProcessHandle> descendants() {
+            return java.util.stream.Stream.of(com.fhaicl.aidevhub.support.SlowCommand.child(childDestroyed));
+        }
 
         StubProcess(int code, boolean alive) {
             this.code = code;

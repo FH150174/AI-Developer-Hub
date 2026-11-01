@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.environment;
 
 import java.io.IOException;
+import com.fhaicl.aidevhub.process.TemporaryProcessOutput;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,14 +36,22 @@ final class VersionCommandExecutor {
     Result execute(List<String> command) throws IOException {
         if (command.isEmpty()) throw new IllegalArgumentException("Command must not be empty");
         // A file drains both streams even when a command emits more than a pipe can hold.
-        try (OutputFile output = new OutputFile(Files.createTempFile("aidevhub-version-", ".txt"))) {
+        try (TemporaryProcessOutput output = TemporaryProcessOutput.create("aidevhub-version-")) {
             ProcessBuilder builder = new ProcessBuilder(command).redirectErrorStream(true)
                     .redirectOutput(output.path().toFile());
-            try (RunningProcess running = new RunningProcess(starter.start(builder))) {
+            Process started;
+            try {
+                started = starter.start(builder);
+            } catch (IOException exception) {
+                throw new CommandExecutionException(CommandExecutionException.Kind.START_FAILED,
+                        "无法启动命令，请确认工具已安装、已加入 PATH 且有执行权限。", exception);
+            }
+            try (RunningProcess running = new RunningProcess(started)) {
                 Process process = running.process();
                 process.getOutputStream().close();
                 if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                    throw new IOException("版本检测超时，请检查工具是否可正常启动。");
+                    throw new CommandExecutionException(CommandExecutionException.Kind.TIMEOUT,
+                            "命令执行超时（上限 " + timeout.toMillis() + " 毫秒），请稍后重试或在终端检查工具。", null);
                 }
                 // Version banners are small; cap the amount retained from unexpected output.
                 try (var input = Files.newInputStream(output.path())) {
@@ -50,7 +59,8 @@ final class VersionCommandExecutor {
                 }
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
-                throw new IOException("版本检测已中断。", exception);
+                throw new CommandExecutionException(CommandExecutionException.Kind.INTERRUPTED,
+                        "命令执行已中断，可重新检测。", exception);
             }
         }
     }
@@ -63,10 +73,6 @@ final class VersionCommandExecutor {
             return new String(bytes, StandardCharsets.UTF_16LE).replace("\ufeff", "");
         }
         return new String(bytes, StandardCharsets.UTF_8);
-    }
-
-    private record OutputFile(Path path) implements AutoCloseable {
-        @Override public void close() throws IOException { Files.deleteIfExists(path); }
     }
 
     private record RunningProcess(Process process) implements AutoCloseable {

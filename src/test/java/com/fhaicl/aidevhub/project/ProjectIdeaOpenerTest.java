@@ -54,7 +54,9 @@ class ProjectIdeaOpenerTest {
         Project project = new Project("project", directory);
         ProjectIdeaOpener opener = new ProjectIdeaOpener(builder -> fail("Must not start"));
 
-        assertThrows(IOException.class, () -> opener.open(project, directory.resolve("idea64.exe")));
+        IOException missing = assertThrows(IOException.class, () -> opener.open(project, directory.resolve("idea64.exe")));
+        assertTrue(missing.getMessage().contains("IDEA"));
+        assertTrue(missing.getMessage().contains("Settings"));
         assertThrows(IOException.class, () -> opener.open(project, directory));
         assertThrows(IOException.class, () -> opener.open(project, wrongExecutable));
     }
@@ -65,8 +67,11 @@ class ProjectIdeaOpenerTest {
         IOException failure = new IOException("Cannot start IDEA");
         ProjectIdeaOpener opener = new ProjectIdeaOpener(builder -> { throw failure; });
 
-        assertSame(failure, assertThrows(IOException.class,
-                () -> opener.open(new Project("project", directory), executable)));
+        IOException reported = assertThrows(IOException.class,
+                () -> opener.open(new Project("project", directory), executable));
+        assertSame(failure, reported.getCause());
+        assertTrue(reported.getMessage().contains("Settings"));
+        assertFalse(reported.getMessage().contains(failure.getMessage()));
     }
 
     @Test

@@ -54,7 +54,9 @@ class ProjectEditorOpenerTest {
         Project project = new Project("project", directory);
         ProjectEditorOpener opener = new ProjectEditorOpener(editor, builder -> fail("Must not start"));
 
-        assertThrows(IOException.class, () -> opener.open(project, directory.resolve(editor.executableName())));
+        IOException missing = assertThrows(IOException.class, () -> opener.open(project, directory.resolve(editor.executableName())));
+        assertTrue(missing.getMessage().contains(editor.displayName()));
+        assertTrue(missing.getMessage().contains("Settings"));
         assertThrows(IOException.class, () -> opener.open(project, directory));
         assertThrows(IOException.class, () -> opener.open(project, otherExecutable));
     }
@@ -66,8 +68,11 @@ class ProjectEditorOpenerTest {
         IOException failure = new IOException("Cannot start editor");
         ProjectEditorOpener opener = new ProjectEditorOpener(editor, builder -> { throw failure; });
 
-        assertSame(failure, assertThrows(IOException.class,
-                () -> opener.open(new Project("project", directory), executable)));
+        IOException reported = assertThrows(IOException.class,
+                () -> opener.open(new Project("project", directory), executable));
+        assertSame(failure, reported.getCause());
+        assertTrue(reported.getMessage().contains("Settings"));
+        assertFalse(reported.getMessage().contains(failure.getMessage()));
     }
 
     @ParameterizedTest

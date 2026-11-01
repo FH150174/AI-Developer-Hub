@@ -17,6 +17,22 @@ class EnvironmentDiagnosticsServiceTest {
         return new EnvironmentDiagnosticsService(command -> { throw new IOException("not expected"); }, "Windows 11");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(CommandExecutionException.Kind.class)
+    void retainsCommandFailureReason(CommandExecutionException.Kind kind) {
+        String message = switch (kind) {
+            case TIMEOUT -> "命令执行超时";
+            case INTERRUPTED -> "命令执行已中断";
+            case START_FAILED -> "无法启动命令，请检查安装及 PATH";
+        };
+        var cause = new CommandExecutionException(kind, message, null);
+        EnvironmentVersionService.Runner runner = command -> { throw cause; };
+        IOException reported = assertThrows(IOException.class, () -> new EnvironmentDiagnosticsService(runner, "Windows 11").wslStatus());
+        assertTrue(reported.getMessage().contains("WSL"));
+        assertTrue(reported.getMessage().contains(message));
+        assertSame(cause, reported.getCause());
+    }
+
     @Test
     void reportsConfiguredMissingAndUnconfiguredIdeFiles() throws IOException {
         Path executable = Files.createFile(directory.resolve("idea64.exe"));

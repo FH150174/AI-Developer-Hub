@@ -30,14 +30,20 @@ public final class ProjectIdeaOpener {
         }
         Path idea = executable.toAbsolutePath().normalize();
         String fileName = idea.getFileName() == null ? "" : idea.getFileName().toString();
-        if (!Files.isRegularFile(idea)
-                || !(fileName.equalsIgnoreCase("idea64.exe") || fileName.equalsIgnoreCase("idea.exe"))) {
+        if (!Files.isRegularFile(idea)) {
+            throw new IOException("未找到 IDEA 启动程序，可能已卸载或路径已变更。请安装 IDEA，或在 Settings 中重新设置路径。");
+        }
+        if (!(fileName.equalsIgnoreCase("idea64.exe") || fileName.equalsIgnoreCase("idea.exe"))) {
             throw new IOException("请选择 IDEA 安装目录 bin 下的 idea64.exe 或 idea.exe。");
         }
         ProcessBuilder builder = new ProcessBuilder(idea.toString(), directory.toString());
         builder.directory(directory.toFile());
         builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
         builder.redirectError(ProcessBuilder.Redirect.DISCARD);
-        starter.start(builder);
+        try {
+            starter.start(builder);
+        } catch (IOException exception) {
+            throw new IOException("无法启动 IDEA，请检查程序是否可运行及访问权限，并在 Settings 中确认路径。", exception);
+        }
     }
 }

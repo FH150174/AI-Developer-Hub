@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.git;
 
 import java.io.IOException;
+import com.fhaicl.aidevhub.process.TemporaryProcessOutput;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -61,8 +62,9 @@ public final class GitCommandExecutor {
         builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
         builder.environment().put("LC_ALL", "C");
         builder.environment().put("GIT_OPTIONAL_LOCKS", "0");
-        try (TemporaryFile output = new TemporaryFile(Files.createTempFile("aidevhub-git-output-", ".txt"));
-             TemporaryFile error = new TemporaryFile(Files.createTempFile("aidevhub-git-error-", ".txt"))) {
+        builder.environment().put("GIT_TERMINAL_PROMPT", "0");
+        try (TemporaryProcessOutput output = TemporaryProcessOutput.create("aidevhub-git-output-");
+             TemporaryProcessOutput error = TemporaryProcessOutput.create("aidevhub-git-error-")) {
             builder.redirectOutput(output.path().toFile());
             builder.redirectError(error.path().toFile());
             Process process;
@@ -89,13 +91,6 @@ public final class GitCommandExecutor {
         }
     }
 
-    private record TemporaryFile(Path path) implements AutoCloseable {
-        @Override
-        public void close() throws IOException {
-            Files.deleteIfExists(path);
-        }
-    }
-
     private record RunningProcess(Process process) implements AutoCloseable {
         @Override
         public void close() throws IOException {
@@ -109,6 +104,8 @@ public final class GitCommandExecutor {
         }
         boolean interrupted = Thread.interrupted();
         try {
+            // Git can start helpers; a timeout must not leave them running in the background.
+            process.descendants().forEach(ProcessHandle::destroyForcibly);
             process.destroyForcibly();
             if (!process.waitFor(1, TimeUnit.SECONDS)) {
                 throw new IOException("无法终止 Git 进程。");

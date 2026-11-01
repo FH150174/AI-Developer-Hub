@@ -27,6 +27,9 @@ public final class ProjectTodoStore {
         Properties data = new Properties();
         try (var input = Files.newInputStream(file(project))) {
             data.loadFromXML(input);
+        } catch (java.util.InvalidPropertiesFormatException exception) {
+            throw new IOException("项目 TODO文件损坏或格式不受支持（需要 XML，不能使用 JSON）。原文件已保留，请备份后检查或从备份恢复："
+                    + file(project), exception);
         } catch (NoSuchFileException exception) {
             return List.of();
         }

@@ -92,6 +92,8 @@ public final class EnvironmentDiagnosticsService {
         VersionCommandExecutor.Result result;
         try {
             result = runner.run(command);
+        } catch (CommandExecutionException exception) {
+            throw new IOException("WSL 检测失败：" + exception.getMessage(), exception);
         } catch (IOException exception) {
             throw new IOException("WSL 检测失败，请确认 WSL 已安装、命令可访问且未超时。", exception);
         }

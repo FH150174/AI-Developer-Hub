@@ -33,7 +33,9 @@ class VersionCommandExecutorTest {
             output[0] = builder.redirectOutput().file().toPath();
             throw new IOException("missing");
         });
-        assertThrows(IOException.class, () -> executor.execute(List.of("missing")));
+        var failure = assertThrows(CommandExecutionException.class, () -> executor.execute(List.of("missing")));
+        assertEquals(CommandExecutionException.Kind.START_FAILED, failure.kind());
+        assertTrue(failure.getMessage().contains("PATH"));
         assertFalse(Files.exists(output[0]));
     }
 
@@ -41,9 +43,11 @@ class VersionCommandExecutorTest {
     void timeoutTerminatesProcess() {
         var process = new StubProcess(true);
         var executor = new VersionCommandExecutor(Duration.ofMillis(1), builder -> process);
-        assertTrue(assertThrows(IOException.class, () -> executor.execute(List.of("tool")))
-                .getMessage().contains("超时"));
+        var failure = assertThrows(CommandExecutionException.class, () -> executor.execute(List.of("tool")));
+        assertEquals(CommandExecutionException.Kind.TIMEOUT, failure.kind());
+        assertTrue(failure.getMessage().contains("超时"));
         assertTrue(process.destroyed);
+        assertTrue(process.childDestroyed.get());
     }
 
     @Test
@@ -69,10 +73,33 @@ class VersionCommandExecutorTest {
         assertTrue(result.output().contains("version"));
     }
 
+    @Test
+    void realLongRunningCommandIsBoundedAndReleasesOutput() throws Exception {
+        Process[] started = new Process[1];
+        Path[] output = new Path[1];
+        var executor = new VersionCommandExecutor(Duration.ofMillis(700), builder -> {
+            output[0] = builder.redirectOutput().file().toPath();
+            started[0] = builder.start();
+            return started[0];
+        });
+        try {
+            assertTimeout(Duration.ofSeconds(5), () -> {
+                var failure = assertThrows(CommandExecutionException.class,
+                        () -> executor.execute(com.fhaicl.aidevhub.support.SlowCommand.command()));
+                assertEquals(CommandExecutionException.Kind.TIMEOUT, failure.kind());
+            });
+            assertFalse(started[0].isAlive());
+            assertFalse(Files.exists(output[0]));
+        } finally {
+            if (started[0] != null && started[0].isAlive()) started[0].destroyForcibly();
+        }
+    }
+
     private static final class StubProcess extends Process {
         boolean alive;
         boolean destroyed;
         boolean interrupt;
+        private final java.util.concurrent.atomic.AtomicBoolean childDestroyed = new java.util.concurrent.atomic.AtomicBoolean();
         StubProcess(boolean alive) { this.alive = alive; }
         @Override public OutputStream getOutputStream() { return OutputStream.nullOutputStream(); }
         @Override public InputStream getInputStream() { return InputStream.nullInputStream(); }
@@ -84,7 +111,9 @@ class VersionCommandExecutorTest {
         }
         @Override public int exitValue() { return 0; }
         @Override public boolean isAlive() { return alive; }
-        @Override public Stream<ProcessHandle> descendants() { return Stream.empty(); }
+        @Override public Stream<ProcessHandle> descendants() {
+            return Stream.of(com.fhaicl.aidevhub.support.SlowCommand.child(childDestroyed));
+        }
         @Override public void destroy() { destroyed = true; alive = false; }
         @Override public Process destroyForcibly() { destroy(); return this; }
     }

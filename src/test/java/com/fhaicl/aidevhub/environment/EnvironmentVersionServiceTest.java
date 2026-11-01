@@ -7,6 +7,22 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EnvironmentVersionServiceTest {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(CommandExecutionException.Kind.class)
+    void retainsCommandFailureReason(CommandExecutionException.Kind kind) {
+        String message = switch (kind) {
+            case TIMEOUT -> "命令执行超时";
+            case INTERRUPTED -> "命令执行已中断";
+            case START_FAILED -> "无法启动命令，请检查安装及 PATH";
+        };
+        var cause = new CommandExecutionException(kind, message, null);
+        EnvironmentVersionService.Runner runner = command -> { throw cause; };
+        IOException reported = assertThrows(IOException.class, () -> new EnvironmentVersionService(runner, "Windows 11").version(EnvironmentVersionService.Tool.GIT));
+        assertTrue(reported.getMessage().contains("Git"));
+        assertTrue(reported.getMessage().contains(message));
+        assertSame(cause, reported.getCause());
+    }
+
     @Test
     void recognizesAllFiveVersionBanners() throws IOException {
         var banners = Map.of(

@@ -55,6 +55,8 @@ public final class EnvironmentVersionService {
         VersionCommandExecutor.Result result;
         try {
             result = runner.run(command);
+        } catch (CommandExecutionException exception) {
+            throw new IOException(tool.displayName() + " 版本检测失败：" + exception.getMessage(), exception);
         } catch (IOException exception) {
             throw new IOException("无法检测 " + tool.displayName()
                     + "。请确认已安装、已加入 PATH 且可正常启动；环境修改后请重启应用。", exception);
