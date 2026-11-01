@@ -73,3 +73,7 @@
 ## 测试分组与验收
 
 TASK-057 的职责映射、快速/集成/UI 测试命令、环境前提与隔离规则见 [测试体系](TESTING.md)。默认验收仍执行 `mvn test`；分组执行不能替代目标平台的完整验收。
+
+## Windows 打包
+
+TASK-058 的 jpackage/WiX 前提、构建命令、输出目录、隔离启动验证及安装验收说明见 [Windows 打包](PACKAGING.md)。打包不等同于安装、发布 Release 或执行 Git 写操作。
