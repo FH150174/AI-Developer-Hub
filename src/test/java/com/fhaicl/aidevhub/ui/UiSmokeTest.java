@@ -78,6 +78,41 @@ class UiSmokeTest {
                 // Return to Dashboard before the next theme pass.
                 navigation.getSelectionModel().select(0);
             }
+            // Regression: the default application size must allow reaching the Git installation check.
+            root = new MainView(directory.resolve("standard-window"));
+            new Scene(root, 960, 640);
+            root.resize(960, 640);
+            Ui.theme(root, AppSettings.Theme.DARK);
+            ListView<?> navigation = (ListView<?>) root.lookup(".navigation");
+            navigation.getSelectionModel().select(2);
+            root.applyCss();
+            root.layout();
+            ToastHost host = (ToastHost) root.getProperties().get(ToastHost.class);
+            var scroll = assertInstanceOf(javafx.scene.control.ScrollPane.class, host.getChildren().getFirst());
+            assertTrue(scroll.isFitToWidth());
+            assertTrue(scroll.getContent().getBoundsInLocal().getHeight() > scroll.getViewportBounds().getHeight());
+            var verticalBar = scroll.getChildrenUnmodifiable().stream()
+                    .filter(node -> node instanceof javafx.scene.control.ScrollBar bar
+                            && bar.getOrientation() == javafx.geometry.Orientation.VERTICAL)
+                    .findFirst().orElseThrow();
+            assertTrue(verticalBar.isVisible());
+            assertTrue(scroll.getContent().lookup(".table-view").getBoundsInLocal().getHeight() >= 140);
+            host.getChildren().getFirst().setOpacity(1);
+            snapshot(root, "task055-git-top");
+            scroll.setVvalue(1);
+            root.layout();
+            javafx.scene.Node viewport = scroll.lookup(".viewport");
+            var visible = viewport.localToScene(viewport.getBoundsInLocal());
+            var checkButton = scroll.getContent().lookupAll(".button").stream()
+                    .filter(node -> node instanceof javafx.scene.control.Button button
+                            && button.getText().equals("检测 Git 是否安装"))
+                    .findFirst().orElseThrow();
+            var buttonBounds = checkButton.localToScene(checkButton.getBoundsInLocal());
+            assertTrue(buttonBounds.getMinY() >= visible.getMinY());
+            assertTrue(buttonBounds.getMaxY() <= visible.getMaxY());
+            var status = ((javafx.scene.layout.VBox) scroll.getContent()).getChildren().getLast();
+            assertTrue(status.localToScene(status.getBoundsInLocal()).getMaxY() <= visible.getMaxY());
+            snapshot(root, "task055-git-bottom");
             MarkdownPreview markdown = new MarkdownPreview();
             javafx.scene.layout.VBox previewRoot = new javafx.scene.layout.VBox(markdown);
             new Scene(previewRoot, 500, 250);
@@ -104,7 +139,7 @@ class UiSmokeTest {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) output.setRGB(x, y, image.getPixelReader().getArgb(x, y));
         }
-        Path target = Path.of("target", "task054-previews");
+        Path target = Path.of("target", name.startsWith("task055") ? "task055-previews" : "task054-previews");
         Files.createDirectories(target);
         assertTrue(ImageIO.write(output, "png", target.resolve(name + ".png").toFile()));
     }

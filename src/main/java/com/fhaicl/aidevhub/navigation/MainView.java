@@ -97,6 +97,10 @@ public final class MainView extends BorderPane {
         pages.put("Environment", environmentView);
         pages.put("Settings", settingsView);
 
+        javafx.scene.control.ScrollPane gitScroll = new javafx.scene.control.ScrollPane(gitView);
+        gitScroll.setFitToWidth(true);
+        // Keep the status table and installation check at their natural heights; scroll the whole page.
+        gitView.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
         javafx.scene.control.ScrollPane dashboardScroll = new javafx.scene.control.ScrollPane(dashboardView);
         dashboardScroll.setFitToWidth(true);
         javafx.scene.control.ScrollPane environmentScroll = new javafx.scene.control.ScrollPane(environmentView);
@@ -133,6 +137,7 @@ public final class MainView extends BorderPane {
                 (observable, previous, selected) -> {
                     if (selected != null) {
                         contentHost.content(selected.equals("Dashboard") ? dashboardScroll
+                                : selected.equals("Git") ? gitScroll
                                 : selected.equals("Environment") ? environmentScroll
                                 : selected.equals("Agents") ? agentsScroll
                                 : selected.equals("Settings") ? settingsScroll : pages.get(selected));
