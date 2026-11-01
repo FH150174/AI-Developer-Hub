@@ -16,6 +16,7 @@ class GitCommandExecutorTest {
     Path directory;
 
     @Test
+    @org.junit.jupiter.api.Tag("integration")
     void executesActualGitWithoutRepository() throws IOException {
         var result = new GitCommandExecutor().execute("--version");
         assertEquals(0, result.exitCode());
@@ -117,6 +118,7 @@ class GitCommandExecutorTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Tag("integration")
     void realLongRunningCommandTimesOutAndReleasesRedirectedOutput() throws Exception {
         Process[] started = new Process[1];
         Path[] output = new Path[2];

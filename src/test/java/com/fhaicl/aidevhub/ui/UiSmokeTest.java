@@ -25,6 +25,7 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.*;
 
 @EnabledOnOs(OS.WINDOWS)
+@org.junit.jupiter.api.Tag("ui")
 class UiSmokeTest {
     @TempDir Path directory;
 

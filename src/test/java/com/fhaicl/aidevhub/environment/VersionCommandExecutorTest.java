@@ -65,6 +65,7 @@ class VersionCommandExecutorTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Tag("integration")
     void actualJavaStderrVersionIsCaptured() throws IOException {
         Path java = Path.of(System.getProperty("java.home"), "bin",
                 System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java");
@@ -74,6 +75,7 @@ class VersionCommandExecutorTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Tag("integration")
     void realLongRunningCommandIsBoundedAndReleasesOutput() throws Exception {
         Process[] started = new Process[1];
         Path[] output = new Path[1];

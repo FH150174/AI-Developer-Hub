@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class GitInstallationCheckerTest {
     @Test
+    @org.junit.jupiter.api.Tag("integration")
     void detectsActualGitWithoutProject() throws IOException {
         assertTrue(new GitInstallationChecker().version().startsWith("git version "));
     }

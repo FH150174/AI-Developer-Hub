@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.*;
 
+@org.junit.jupiter.api.Tag("integration")
 class AppDataDirectoryTest {
     @TempDir Path directory;
     private Path destination() { return directory.resolve("Roaming/AI-Developer-Hub"); }

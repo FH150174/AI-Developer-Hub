@@ -15,6 +15,7 @@ import java.util.zip.DeflaterOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@org.junit.jupiter.api.Tag("integration")
 class GitLatestCommitReaderTest {
     @TempDir
     Path directory;

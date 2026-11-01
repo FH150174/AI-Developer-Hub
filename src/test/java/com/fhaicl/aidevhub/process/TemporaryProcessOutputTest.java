@@ -12,6 +12,7 @@ import org.junit.jupiter.api.condition.OS;
 import static org.junit.jupiter.api.Assertions.*;
 
 @EnabledOnOs(OS.WINDOWS)
+@org.junit.jupiter.api.Tag("integration")
 class TemporaryProcessOutputTest {
     @Test void retriesTransientFileLockAndPreservesExistingInterruptFlag() throws Exception {
         TemporaryProcessOutput output = TemporaryProcessOutput.create("aidevhub-cleanup-test-");

@@ -12,6 +12,18 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProjectStoreTest {
     @TempDir Path directory;
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"-1", "2147483647", "2147483648", "NaN", ""})
+    void rejectsInvalidAndOversizedCountsWithoutChangingData(String count) throws IOException {
+        Path file = directory.resolve("projects.xml");
+        Properties properties = new Properties();
+        properties.setProperty("count", count);
+        write(file, properties);
+        byte[] original = Files.readAllBytes(file);
+        assertThrows(IOException.class, () -> new ProjectStore(file).load());
+        assertArrayEquals(original, Files.readAllBytes(file));
+    }
+
     @Test
     void missingFileLoadsEmptyWithoutCreatingFile() throws IOException {
         Path file = directory.resolve("projects.xml");

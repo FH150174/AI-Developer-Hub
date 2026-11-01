@@ -12,6 +12,19 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ProjectListTest {
     @Test
+    void callersCannotMutateSnapshotsAndRejectedRenamePreservesExistingState() {
+        ProjectList projects = new ProjectList();
+        projects.add(Path.of("中文 project"));
+        var snapshot = projects.projects();
+        assertThrows(UnsupportedOperationException.class, snapshot::clear);
+        assertThrows(IllegalArgumentException.class, () -> projects.rename(snapshot.getFirst(), "\u2003"));
+        assertEquals(snapshot, projects.projects());
+        Project renamed = projects.rename(snapshot.getFirst(), "new name");
+        assertEquals("中文 project", snapshot.getFirst().name());
+        assertEquals(renamed, projects.projects().getFirst());
+    }
+
+    @Test
     void renamesOnlySelectedProjectAndPreservesPathAndOrder() {
         ProjectList list = new ProjectList();
         list.add(Path.of("first"));

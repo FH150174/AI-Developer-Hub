@@ -10,6 +10,21 @@ class AppSettingsTest {
     @TempDir Path directory;
     private Path file() { return directory.resolve("settings/settings.xml"); }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "terminal,UNKNOWN", "theme,UNKNOWN", "startPage,UNKNOWN", "projectDirectory,relative"})
+    void rejectsInvalidStoredValuesAndBlocksOverwrite(String key, String value) throws IOException {
+        Files.createDirectories(file().getParent());
+        java.util.Properties properties = new java.util.Properties();
+        properties.setProperty(key, value);
+        try (var output = Files.newOutputStream(file())) { properties.storeToXML(output, "boundary fixture"); }
+        byte[] before = Files.readAllBytes(file());
+        AppSettings settings = new AppSettings(file());
+        assertThrows(IOException.class, settings::load);
+        assertThrows(IOException.class, () -> settings.save(settings.values()));
+        assertArrayEquals(before, Files.readAllBytes(file()));
+    }
+
     @Test void defaultsToPowerShell7WithoutCreatingFile() throws IOException {
         AppSettings settings = new AppSettings(file());
         settings.load();

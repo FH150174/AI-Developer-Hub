@@ -69,3 +69,7 @@
 | Result | 验证结果及限制 |
 | Out-of-scope | 发现的范围外问题 |
 | Git | 确认是否执行了 `git add`、`git commit`、`git push` |
+
+## 测试分组与验收
+
+TASK-057 的职责映射、快速/集成/UI 测试命令、环境前提与隔离规则见 [测试体系](TESTING.md)。默认验收仍执行 `mvn test`；分组执行不能替代目标平台的完整验收。
