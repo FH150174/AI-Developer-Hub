@@ -23,7 +23,7 @@ class GitWorkflowIntegrationTest {
         assertEquals(0, new GitCommandExecutor().execute(repository, "init", "--initial-branch=feature/中文").exitCode());
         Path nested = Files.createDirectories(repository.resolve("子目录 with spaces"));
         Path data = directory.resolve("data/projects.xml");
-        new ProjectStore(data).save(List.of(new Project("stored project", nested)));
+        new ProjectStore(data).save(List.of(), List.of(new Project("stored project", nested)));
         Project project = new ProjectStore(data).load().getFirst();
         Map<Path, String> before = metadata(repository.resolve(".git"));
         assertEquals(GitRepositoryChecker.Status.REPOSITORY, new GitRepositoryChecker().check(project));

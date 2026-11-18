@@ -45,7 +45,7 @@ class AppDataDirectoryTest {
         Project project = new Project("中文项目", directory.resolve("project"));
         var logs = List.of(new DevelopmentLog("日志", "# 内容\n测试"));
         var todos = List.of(new TodoItem("待办", true, TodoItem.Priority.HIGH));
-        new ProjectStore(legacy().resolve("projects.xml")).save(List.of(project));
+        new ProjectStore(legacy().resolve("projects.xml")).save(List.of(), List.of(project));
         new ProjectLogStore(legacy().resolve("notes")).save(project, logs);
         new ProjectTodoStore(legacy().resolve("todos")).save(project, todos);
         AppSettings settings = new AppSettings(legacy().resolve("settings.xml"));

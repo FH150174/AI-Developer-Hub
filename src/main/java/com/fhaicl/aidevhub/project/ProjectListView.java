@@ -51,14 +51,27 @@ public final class ProjectListView extends VBox {
         table.setPlaceholder(Ui.empty("还没有项目", "点击“添加项目”，选择一个本地开发目录开始。"));
         Label storageStatus = new Label();
         storageStatus.setWrapText(true);
-        try {
-            projects.replaceAll(store.load());
-            table.getItems().setAll(projects.projects());
-        } catch (IOException | SecurityException exception) {
-            loadFailed.set(true);
-            storageStatus.setText("项目列表加载失败，已禁用编辑以保护原文件。请检查 " + projectsFile + " 后重启。原因："
-                    + exception.getMessage());
-        }
+        Runnable reload = () -> {
+            try {
+                List<Project> saved = store.load();
+                projects.replaceAll(saved);
+                table.getItems().setAll(saved);
+                loadFailed.set(false);
+                storageStatus.setText("");
+                Project previous = currentProject.project();
+                currentProject.synchronize(saved);
+                if (!java.util.Objects.equals(previous, currentProject.project())) {
+                    onCurrentProjectChanged.accept(currentProject.project());
+                }
+            } catch (IOException | SecurityException exception) {
+                loadFailed.set(true);
+                storageStatus.setText("项目列表加载失败，已禁用编辑。请检查 " + projectsFile + " 后重新加载列表。原因："
+                        + exception.getMessage());
+            }
+        };
+        reload.run();
+        Button reloadButton = new Button("重新加载列表");
+        reloadButton.setOnAction(event -> reload.run());
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TableColumn<Project, String> nameColumn = new TableColumn<>("项目名称");
@@ -401,7 +414,7 @@ public final class ProjectListView extends VBox {
         });
 
         getChildren().addAll(title, description, storageStatus,
-                new javafx.scene.layout.FlowPane(12, 12, addButton, renameButton, removeButton, selectButton, checkPathButton),
+                new javafx.scene.layout.FlowPane(12, 12, addButton, renameButton, removeButton, selectButton, checkPathButton, reloadButton),
                 new javafx.scene.layout.FlowPane(12, 12, openButton, terminalButton, ideaButton, checkGitButton),
                 new javafx.scene.layout.FlowPane(12, 12, createEditorButton(table, ProjectEditorOpener.Editor.VS_CODE),
                         createEditorButton(table, ProjectEditorOpener.Editor.CURSOR), branchButton),
@@ -442,7 +455,7 @@ public final class ProjectListView extends VBox {
 
     private boolean saveChanges(List<Project> before) {
         try {
-            store.save(projects.projects());
+            store.save(before, projects.projects());
             Ui.toast(this, "项目列表已保存。");
             currentProject.synchronize(projects.projects());
             onCurrentProjectChanged.accept(currentProject.project());

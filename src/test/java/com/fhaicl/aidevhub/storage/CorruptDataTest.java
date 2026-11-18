@@ -37,7 +37,7 @@ class CorruptDataTest {
             assertTrue(failure.getMessage().contains("JSON"));
             assertTrue(failure.getMessage().contains(fixture.file().toString()));
             assertNotNull(failure.getCause());
-            if (data == Data.APP || data == Data.IDE || data == Data.AGENT) {
+            if (data == Data.APP || data == Data.IDE || data == Data.AGENT || data == Data.PROJECTS) {
                 assertThrows(IOException.class, fixture.save()::run);
             }
             assertArrayEquals(original, Files.readAllBytes(fixture.file()));
@@ -68,7 +68,7 @@ class CorruptDataTest {
             case PROJECTS -> {
                 Path file = root.resolve("projects.xml");
                 ProjectStore store = new ProjectStore(file);
-                yield new Fixture(file, store::load, () -> store.save(List.of(project)));
+                yield new Fixture(file, store::load, () -> store.save(List.of(), List.of(project)));
             }
             case NOTES -> {
                 Path notes = root.resolve("notes");

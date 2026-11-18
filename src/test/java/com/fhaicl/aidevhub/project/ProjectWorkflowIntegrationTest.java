@@ -37,7 +37,7 @@ class ProjectWorkflowIntegrationTest {
         var log = new DevelopmentLog("开发记录", "# 中文内容\n完成测试", LocalDate.of(2026, 1, 1));
         new ProjectLogService(logStore).create(selected, List.of(), log);
         Project renamed = projects.rename(selected, "重命名后的项目");
-        store.save(projects.projects());
+        store.save(List.of(), projects.projects());
         current.synchronize(projects.projects());
         assertEquals(renamed, current.project());
 
@@ -53,7 +53,7 @@ class ProjectWorkflowIntegrationTest {
 
         // Removing a list entry clears selection but does not delete a user's directory or associated data.
         assertTrue(restarted.remove(restored));
-        store.save(restarted.projects());
+        store.save(projects.projects(), restarted.projects());
         current.synchronize(restarted.projects());
         assertNull(current.project());
         assertTrue(Files.isDirectory(first));
