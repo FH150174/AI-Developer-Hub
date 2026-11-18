@@ -1,41 +1,38 @@
 package com.fhaicl.aidevhub.todo;
 
 import com.fhaicl.aidevhub.project.Project;
+import com.fhaicl.aidevhub.storage.ProjectHistoryFiles;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 
 public final class ProjectTodoStore {
-    private final Path directory;
+    private final ProjectHistoryFiles files;
 
     public ProjectTodoStore(Path directory) {
-        this.directory = Objects.requireNonNull(directory).toAbsolutePath().normalize();
+        this.files = new ProjectHistoryFiles(directory);
     }
 
     public List<TodoItem> load(Project project) throws IOException {
         Properties data = new Properties();
-        try (var input = Files.newInputStream(file(project))) {
+        var entry = files.resolve(project.path());
+        try (var input = Files.newInputStream(entry.file())) {
             data.loadFromXML(input);
         } catch (java.util.InvalidPropertiesFormatException exception) {
             throw new IOException("项目 TODO文件损坏或格式不受支持（需要 XML，不能使用 JSON）。原文件已保留，请备份后检查或从备份恢复："
-                    + file(project), exception);
+                    + entry.file(), exception);
         } catch (NoSuchFileException exception) {
             return List.of();
         }
         try {
             int count = Integer.parseInt(data.getProperty("count"));
-            if (!key(project).equals(data.getProperty("project.path")) || count < 0
+            if (!entry.key().equals(data.getProperty("project.path")) || count < 0
                     || count > data.size() - 2L) {
                 throw new IllegalArgumentException("Invalid project TODO data");
             }
@@ -66,16 +63,17 @@ public final class ProjectTodoStore {
 
     public void save(Project project, List<TodoItem> items) throws IOException {
         List<TodoItem> snapshot = List.copyOf(items);
+        var entry = files.resolve(project.path());
         Properties data = new Properties();
-        data.setProperty("project.path", key(project));
+        data.setProperty("project.path", entry.key());
         data.setProperty("count", Integer.toString(snapshot.size()));
         for (int i = 0; i < snapshot.size(); i++) {
             data.setProperty(i + ".title", snapshot.get(i).title());
             data.setProperty(i + ".completed", Boolean.toString(snapshot.get(i).completed()));
             data.setProperty(i + ".priority", snapshot.get(i).priority().name());
         }
-        Path destination = file(project);
-        Files.createDirectories(directory);
+        Path destination = entry.file();
+        Path directory = Files.createDirectories(destination.getParent());
         Path temporary = Files.createTempFile(directory, "todos-", ".tmp");
         try {
             try (var output = Files.newOutputStream(temporary)) {
@@ -87,17 +85,4 @@ public final class ProjectTodoStore {
         }
     }
 
-    private String key(Project project) {
-        return Objects.requireNonNull(project).path().toAbsolutePath().normalize().toString();
-    }
-
-    private Path file(Project project) {
-        try {
-            // Stable filenames isolate project paths and keep application data outside project directories.
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(key(project).getBytes(StandardCharsets.UTF_8));
-            return directory.resolve(HexFormat.of().formatHex(hash) + ".xml");
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("Required SHA-256 algorithm is unavailable", exception);
-        }
-    }
 }

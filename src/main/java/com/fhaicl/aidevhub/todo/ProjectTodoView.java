@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.todo;
 
 import com.fhaicl.aidevhub.ui.Ui;
+import com.fhaicl.aidevhub.storage.HistoryConflictException;
 import com.fhaicl.aidevhub.project.Project;
 import javafx.concurrent.Task;
 import javafx.beans.property.BooleanProperty;
@@ -128,7 +129,8 @@ public final class ProjectTodoView extends VBox {
             activeTask = null;
             items.setDisable(true);
             emptyState.setText("TODO 读取失败");
-            status.setText("项目 TODO 读取失败，请检查存储文件、访问权限及磁盘状态。重新进入 TODO 可重试。");
+            status.setText(HistoryConflictException.messageOr(task.getException(),
+                    "项目 TODO 读取失败，请检查存储文件、访问权限及磁盘状态。重新进入 TODO 可重试。"));
             System.getLogger(ProjectTodoView.class.getName()).log(System.Logger.Level.WARNING,
                     "Project TODO loading failed", task.getException());
         });
@@ -157,7 +159,8 @@ public final class ProjectTodoView extends VBox {
                 showSaved(updated, updated.size() - 1);
             } catch (IOException | SecurityException exception) {
                 event.consume();
-                error.setText("添加失败，输入已保留。请检查访问权限、磁盘状态或 TODO 是否已变化。");
+                error.setText(HistoryConflictException.messageOr(exception,
+                        "添加失败，输入已保留。请检查访问权限、磁盘状态或 TODO 是否已变化。"));
                 dialog.getDialogPane().setExpanded(true);
                 reportFailure(exception);
             }
@@ -184,7 +187,8 @@ public final class ProjectTodoView extends VBox {
                     : service.setCompleted(selected, before, index, !before.get(index).completed());
             showSaved(updated, Math.min(index, updated.size() - 1));
         } catch (IOException | SecurityException exception) {
-            status.setText("保存失败，原列表保持不变。请检查访问权限、磁盘状态或 TODO 是否已变化。重新进入 TODO 可重新加载。");
+            status.setText(HistoryConflictException.messageOr(exception,
+                    "保存失败，原列表保持不变。请检查访问权限、磁盘状态或 TODO 是否已变化。重新进入 TODO 可重新加载。"));
             reportFailure(exception);
         }
     }
@@ -223,7 +227,8 @@ public final class ProjectTodoView extends VBox {
             try {
                 showSaved(service.setPriority(selected, before, index, priority), index);
             } catch (IOException | SecurityException exception) {
-                status.setText("优先级保存失败，原列表保持不变。请检查访问权限或重新进入 TODO 加载后再试。");
+                status.setText(HistoryConflictException.messageOr(exception,
+                        "优先级保存失败，原列表保持不变。请检查访问权限或重新进入 TODO 加载后再试。"));
                 reportFailure(exception);
             }
         });

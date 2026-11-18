@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.notes;
 
 import com.fhaicl.aidevhub.ui.Ui;
+import com.fhaicl.aidevhub.storage.HistoryConflictException;
 import com.fhaicl.aidevhub.project.Project;
 import javafx.concurrent.Task;
 import javafx.beans.property.BooleanProperty;
@@ -134,7 +135,8 @@ public final class ProjectLogsView extends VBox {
             if (activeTask != task) return;
             activeTask = null;
             logs.setDisable(true);
-            status.setText("项目日志读取失败，请检查日志文件内容、访问权限及磁盘状态。重新进入 Notes 可重试。");
+            status.setText(HistoryConflictException.messageOr(task.getException(),
+                    "项目日志读取失败，请检查日志文件内容、访问权限及磁盘状态。重新进入 Notes 可重试。"));
             System.getLogger(ProjectLogsView.class.getName()).log(System.Logger.Level.WARNING,
                     "Project log loading failed", task.getException());
         });
@@ -196,7 +198,8 @@ public final class ProjectLogsView extends VBox {
                 status.setText("日志已保存。开发日志：" + updated.size() + " 条");
             } catch (IOException | SecurityException exception) {
                 event.consume();
-                error.setText("保存失败，输入内容已保留。请检查文件权限、磁盘状态或日志是否已变化。");
+                error.setText(HistoryConflictException.messageOr(exception,
+                        "保存失败，输入内容已保留。请检查文件权限、磁盘状态或日志是否已变化。"));
                 reportFailure(exception);
             }
         });
@@ -222,7 +225,8 @@ public final class ProjectLogsView extends VBox {
             Ui.toast(this, "日志已删除。");
             status.setText(updated.isEmpty() ? "当前项目暂无开发日志。" : "日志已删除。开发日志：" + updated.size() + " 条");
         } catch (IOException | SecurityException exception) {
-            status.setText("删除失败，列表保持不变。请检查文件权限、磁盘状态或日志是否已变化。");
+            status.setText(HistoryConflictException.messageOr(exception,
+                    "删除失败，列表保持不变。请检查文件权限、磁盘状态或日志是否已变化。"));
             reportFailure(exception);
         }
     }

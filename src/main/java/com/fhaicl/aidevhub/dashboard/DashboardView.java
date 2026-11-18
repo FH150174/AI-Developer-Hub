@@ -1,6 +1,7 @@
 package com.fhaicl.aidevhub.dashboard;
 
 import com.fhaicl.aidevhub.ui.Ui;
+import com.fhaicl.aidevhub.storage.HistoryConflictException;
 import com.fhaicl.aidevhub.settings.AppSettings;
 import com.fhaicl.aidevhub.project.Project;
 import com.fhaicl.aidevhub.project.ProjectDirectoryOpener;
@@ -127,7 +128,8 @@ public final class DashboardView extends VBox {
         task.setOnFailed(event -> {
             if (activeTask != task) return;
             activeTask = null;
-            incomplete.setText("未完成 TODO：读取失败。请检查 TODO 文件、访问权限及磁盘状态，重新进入 Dashboard 可重试。");
+            incomplete.setText(HistoryConflictException.messageOr(task.getException(),
+                    "未完成 TODO：读取失败。请检查 TODO 文件、访问权限及磁盘状态，重新进入 Dashboard 可重试。"));
             System.getLogger(DashboardView.class.getName()).log(System.Logger.Level.WARNING,
                     "Dashboard TODO count loading failed", task.getException());
         });
@@ -163,7 +165,8 @@ public final class DashboardView extends VBox {
         task.setOnFailed(event -> {
             if (logTask != task) return;
             logTask = null;
-            latestLog.setText("最近开发日志：读取失败，请检查日志文件及访问权限，点击刷新重试。");
+            latestLog.setText(HistoryConflictException.messageOr(task.getException(),
+                    "最近开发日志：读取失败，请检查日志文件及访问权限，点击刷新重试。"));
             System.getLogger(DashboardView.class.getName()).log(System.Logger.Level.WARNING,
                     "Dashboard log loading failed", task.getException());
         });
