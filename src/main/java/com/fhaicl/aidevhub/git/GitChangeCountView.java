@@ -10,11 +10,18 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public final class GitChangeCountView extends VBox {
+    @FunctionalInterface
+    interface WorkingTreeQuery {
+        GitWorkingTreeReader.Result read(Project project) throws IOException;
+    }
+
     private final Label countLabel = new Label("修改文件数量：—");
     private final TableView<GitWorkingTreeReader.FileChange> files = new TableView<>();
     private final Label emptyState = new Label("未选择当前项目");
+    private final WorkingTreeQuery query;
     private Project project;
     private Task<GitWorkingTreeReader.Result> activeTask;
 
@@ -23,7 +30,12 @@ public final class GitChangeCountView extends VBox {
     }
 
     public GitChangeCountView(boolean showDetails) {
+        this(showDetails, new GitWorkingTreeReader()::readDetails);
+    }
+
+    GitChangeCountView(boolean showDetails, WorkingTreeQuery query) {
         super(8);
+        this.query = Objects.requireNonNull(query);
         countLabel.setWrapText(true);
         Label scope = new Label("统计整个仓库的已暂存、未暂存和未跟踪文件；同一文件只计一次，不含忽略文件。");
         scope.setWrapText(true);
@@ -54,14 +66,21 @@ public final class GitChangeCountView extends VBox {
 
     public void setProject(Project project) {
         this.project = project;
-        refresh();
+        cancelActiveTask();
+        files.getItems().clear();
+        emptyState.setText(project == null ? "未选择当前项目" : "项目已变更，进入页面后刷新 Git 状态。");
+        countLabel.setText("修改文件数量：—");
     }
 
-    public void refresh() {
+    private void cancelActiveTask() {
         if (activeTask != null) {
             activeTask.cancel(true);
             activeTask = null;
         }
+    }
+
+    public void refresh() {
+        cancelActiveTask();
         files.getItems().clear();
         emptyState.setText(project == null ? "未选择当前项目" : "正在读取 Git 状态…");
         countLabel.setText(project == null ? "修改文件数量：—" : "修改文件数量：正在读取…");
@@ -72,7 +91,7 @@ public final class GitChangeCountView extends VBox {
         Task<GitWorkingTreeReader.Result> task = new Task<>() {
             @Override
             protected GitWorkingTreeReader.Result call() throws IOException {
-                return new GitWorkingTreeReader().readDetails(selected);
+                return query.read(selected);
             }
         };
         activeTask = task;

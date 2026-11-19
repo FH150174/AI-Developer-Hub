@@ -21,7 +21,11 @@ public final class GitLatestCommitView extends VBox {
 
     public void setProject(Project project) {
         this.project = project;
-        refresh();
+        if (activeTask != null) {
+            activeTask.cancel(true);
+            activeTask = null;
+        }
+        commitLabel.setText("最近 Commit：—");
     }
 
     public void refresh() {

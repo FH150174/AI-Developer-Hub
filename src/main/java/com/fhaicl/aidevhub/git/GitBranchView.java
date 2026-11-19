@@ -28,10 +28,14 @@ public final class GitBranchView extends VBox {
 
     public void setProject(Project project) {
         this.project = project;
+        if (activeTask != null) {
+            activeTask.cancel(true);
+            activeTask = null;
+        }
         projectLabel.setText(project == null
                 ? "未选择当前项目，请先在 Projects 中设为当前项目。"
                 : "当前项目：" + project.name() + "\n路径：" + project.path());
-        refresh();
+        branchLabel.setText("当前分支：—");
     }
 
     public void refresh() {

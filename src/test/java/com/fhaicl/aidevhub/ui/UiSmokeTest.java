@@ -31,10 +31,18 @@ class UiSmokeTest {
 
     @Test void rendersBothThemesPagesMarkdownDialogsAndToast() throws Exception {
         CountDownLatch ready = new CountDownLatch(1);
-        Platform.startup(() -> {
-            Platform.setImplicitExit(false);
-            ready.countDown();
-        });
+        try {
+            Platform.startup(() -> {
+                Platform.setImplicitExit(false);
+                ready.countDown();
+            });
+        } catch (IllegalStateException alreadyStarted) {
+            // Another UI test class may have initialized the toolkit in this JVM.
+            Platform.runLater(() -> {
+                Platform.setImplicitExit(false);
+                ready.countDown();
+            });
+        }
         assertTrue(ready.await(15, TimeUnit.SECONDS));
         FutureTask<Void> check = new FutureTask<>(() -> {
             MainView root = new MainView(directory);
