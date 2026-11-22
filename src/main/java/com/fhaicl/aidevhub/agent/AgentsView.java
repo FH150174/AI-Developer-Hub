@@ -5,14 +5,19 @@ import javafx.concurrent.Task;
 import com.fhaicl.aidevhub.project.Project;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 public final class AgentsView extends VBox {
@@ -28,8 +33,12 @@ public final class AgentsView extends VBox {
     private final Map<AgentLauncher.Tool, Task<Void>> activeTasks = new EnumMap<>(AgentLauncher.Tool.class);
 
     public AgentsView(AgentPathSettings settings) {
+        this(new AgentLauncher(settings));
+    }
+
+    AgentsView(AgentLauncher launcher) {
         super(12);
-        launcher = new AgentLauncher(settings);
+        this.launcher = Objects.requireNonNull(launcher);
         setPadding(new Insets(24));
         setMinWidth(0);
         Label title = new Label("Agents");
@@ -37,28 +46,39 @@ public final class AgentsView extends VBox {
         Label description = new Label("从当前项目目录打开独立窗口。可在 Settings 配置启动程序路径，留空则从 PATH 查找；WSL 使用默认发行版。CLI 登录及启动错误请查看打开的终端。");
         description.setWrapText(true);
         currentProject.setWrapText(true);
+        currentProject.setMinWidth(0);
         Label contextHelp = new Label("默认启动 Codex / Claude 时会收到读取上下文的首条提示；自定义命令自行决定参数。Antigravity / PowerShell / WSL 携带 AIDEVHUB_PROJECT_CONTEXT 环境变量，可复制下方上下文用于聊天。");
         contextHelp.setWrapText(true);
         contextPreview.setEditable(false);
         contextPreview.setWrapText(true);
         contextPreview.setPrefRowCount(5);
         contextPreview.setMinHeight(100);
+        copyContext.setMinWidth(Region.USE_PREF_SIZE);
         copyContext.setOnAction(event -> {
             ClipboardContent content = new ClipboardContent();
             content.putString(contextPreview.getText());
             Clipboard.getSystemClipboard().setContent(content);
         });
-        getChildren().addAll(title, description, currentProject, contextHelp, contextPreview, copyContext);
+        VBox contextBody = new VBox(8, description, contextHelp, contextPreview);
+        contextBody.setMinWidth(0);
+        TitledPane contextPane = new TitledPane("查看项目上下文", contextBody);
+        contextPane.setExpanded(false);
+        contextPane.setAnimated(false);
+        contextPane.setCollapsible(true);
+        contextPane.getStyleClass().add("agent-context");
+        HBox projectRow = new HBox(12, currentProject, copyContext);
+        projectRow.setAlignment(Pos.TOP_LEFT);
+        HBox.setHgrow(currentProject, Priority.ALWAYS);
+        getChildren().addAll(title, projectRow);
         for (var tool : AgentLauncher.Tool.values()) {
-            Label name = new Label(tool.displayName());
-            name.setMinWidth(110);
-            Button launch = new Button("启动");
+            Button launch = new Button("启动 " + tool.displayName());
             buttons.put(tool, launch);
             Label status = new Label();
             statuses.put(tool, status);
             status.setWrapText(true);
-            HBox row = new HBox(12, name, launch, status);
+            HBox row = new HBox(12, launch, status);
             HBox.setHgrow(status, Priority.ALWAYS);
+            launch.setMinWidth(Region.USE_PREF_SIZE);
             launch.setOnAction(event -> {
                 Project selected = project;
                 if (selected == null) return;
@@ -93,6 +113,7 @@ public final class AgentsView extends VBox {
             row.getStyleClass().add("card");
             getChildren().add(row);
         }
+        getChildren().add(contextPane);
         setProject(null);
     }
 
@@ -107,6 +128,7 @@ public final class AgentsView extends VBox {
         if (project != null) loadContext(project);
         currentProject.setText(project == null ? "未选择当前项目，请先在 Projects 中设为当前项目。"
                 : "当前项目：" + project.name() + "\n路径：" + project.path());
+        currentProject.setTooltip(project == null ? null : new Tooltip(currentProject.getText()));
         // A launch already requested keeps its captured project; its status belongs to that selection.
         activeTasks.clear();
         buttons.values().forEach(button -> button.setDisable(project == null));

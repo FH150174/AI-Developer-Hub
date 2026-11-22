@@ -5,6 +5,8 @@ import javafx.concurrent.Task;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
@@ -21,24 +23,36 @@ public final class GitChangeCountView extends VBox {
     private final Label countLabel = new Label("修改文件数量：—");
     private final TableView<GitWorkingTreeReader.FileChange> files = new TableView<>();
     private final Label emptyState = new Label("未选择当前项目");
+    private final boolean compact;
     private final WorkingTreeQuery query;
     private Project project;
     private Task<GitWorkingTreeReader.Result> activeTask;
 
     public GitChangeCountView() {
-        this(true);
+        this(true, false);
     }
 
     public GitChangeCountView(boolean showDetails) {
-        this(showDetails, new GitWorkingTreeReader()::readDetails);
+        this(showDetails, false);
+    }
+
+    public GitChangeCountView(boolean showDetails, boolean compact) {
+        this(showDetails, compact, new GitWorkingTreeReader()::readDetails);
     }
 
     GitChangeCountView(boolean showDetails, WorkingTreeQuery query) {
+        this(showDetails, false, query);
+    }
+
+    GitChangeCountView(boolean showDetails, boolean compact, WorkingTreeQuery query) {
         super(8);
+        this.compact = compact;
         this.query = Objects.requireNonNull(query);
         countLabel.setWrapText(true);
+        if (compact) countLabel.getStyleClass().add("metric-value");
         Label scope = new Label("统计整个仓库的已暂存、未暂存和未跟踪文件；同一文件只计一次，不含忽略文件。");
         scope.setWrapText(true);
+        scope.setMinWidth(0);
         Label heading = new Label("Git 状态列表");
         Label legend = new Label("状态码：第一位为暂存区，第二位为工作区；? 未跟踪，M 修改，D 删除，A 新增，R 重命名，C 复制，U 冲突。");
         legend.setWrapText(true);
@@ -60,7 +74,16 @@ public final class GitChangeCountView extends VBox {
         files.setPrefHeight(280);
         files.setMinHeight(140);
         VBox.setVgrow(files, Priority.ALWAYS);
-        getChildren().addAll(countLabel, scope);
+        if (compact) {
+            TitledPane explanation = new TitledPane("统计说明", scope);
+            explanation.setExpanded(false);
+            explanation.setAnimated(false);
+            explanation.setFocusTraversable(true);
+            explanation.getStyleClass().add("stats-explanation");
+            getChildren().addAll(countLabel, explanation);
+        } else {
+            getChildren().addAll(countLabel, scope);
+        }
         if (showDetails) getChildren().addAll(heading, legend, files);
     }
 
@@ -69,7 +92,8 @@ public final class GitChangeCountView extends VBox {
         cancelActiveTask();
         files.getItems().clear();
         emptyState.setText(project == null ? "未选择当前项目" : "项目已变更，进入页面后刷新 Git 状态。");
-        countLabel.setText("修改文件数量：—");
+        countLabel.setTooltip(null);
+        countLabel.setText(compact ? "—" : "修改文件数量：—");
     }
 
     private void cancelActiveTask() {
@@ -83,7 +107,9 @@ public final class GitChangeCountView extends VBox {
         cancelActiveTask();
         files.getItems().clear();
         emptyState.setText(project == null ? "未选择当前项目" : "正在读取 Git 状态…");
-        countLabel.setText(project == null ? "修改文件数量：—" : "修改文件数量：正在读取…");
+        countLabel.setTooltip(null);
+        countLabel.setText(project == null ? (compact ? "—" : "修改文件数量：—")
+                : (compact ? "正在读取…" : "修改文件数量：正在读取…"));
         if (project == null) {
             return;
         }
@@ -111,7 +137,7 @@ public final class GitChangeCountView extends VBox {
                 case MISSING -> "项目路径不存在";
                 case NOT_DIRECTORY -> "项目路径不是目录";
             });
-            countLabel.setText(switch (task.getValue().status()) {
+            countLabel.setText(compact ? compactSummary(task.getValue()) : switch (task.getValue().status()) {
                 case CLEAN, DIRTY -> "修改文件数量：" + task.getValue().files().size();
                 case NO_WORKING_TREE -> "修改文件数量：不可用，裸仓库没有 Working Tree。";
                 case NOT_REPOSITORY -> "修改文件数量：不可用，项目目录不是 Git 仓库。";
@@ -126,10 +152,23 @@ public final class GitChangeCountView extends VBox {
             activeTask = null;
             files.getItems().clear();
             emptyState.setText("Git 状态读取失败，请检查上方错误提示");
-            countLabel.setText("修改文件数量：读取失败。" + GitException.userMessage(task.getException()));
+            String detail = "修改文件数量：读取失败。" + GitException.userMessage(task.getException());
+            countLabel.setText(compact ? "读取失败" : detail);
+            if (compact) countLabel.setTooltip(new Tooltip(detail));
         });
         Thread thread = new Thread(task, "git-change-count-display");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    private static String compactSummary(GitWorkingTreeReader.Result result) {
+        return switch (result.status()) {
+            case CLEAN -> "无变更";
+            case DIRTY -> result.files().size() + " 个文件变更";
+            case NO_WORKING_TREE -> "不可用（裸仓库）";
+            case NOT_REPOSITORY -> "不是 Git 仓库";
+            case MISSING -> "项目路径不存在";
+            case NOT_DIRECTORY -> "项目路径不是目录";
+        };
     }
 }

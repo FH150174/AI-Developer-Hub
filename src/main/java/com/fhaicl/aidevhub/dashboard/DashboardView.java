@@ -16,12 +16,17 @@ import com.fhaicl.aidevhub.git.GitLatestCommitView;
 import com.fhaicl.aidevhub.git.GitChangeCountView;
 import javafx.scene.control.Button;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import com.fhaicl.aidevhub.notes.ProjectLogService;
 import com.fhaicl.aidevhub.todo.ProjectTodoService;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.io.IOException;
@@ -33,9 +38,9 @@ public final class DashboardView extends VBox {
     private final Label incomplete = new Label();
     private final Label projectCount = new Label();
     private final Label latestLog = new Label();
-    private final GitBranchView branch = new GitBranchView(false);
-    private final GitLatestCommitView commit = new GitLatestCommitView();
-    private final GitChangeCountView changes = new GitChangeCountView(false);
+    private final GitBranchView branch = new GitBranchView(false, true);
+    private final GitLatestCommitView commit = new GitLatestCommitView(true);
+    private final GitChangeCountView changes = new GitChangeCountView(false, true);
     private final FlowPane launchers = new FlowPane(8, 8);
     private final ProjectLogService logs;
     private Task<DevelopmentLog> logTask;
@@ -52,10 +57,16 @@ public final class DashboardView extends VBox {
         Label title = new Label("Dashboard");
         title.getStyleClass().add("page-title");
         projectLabel.setWrapText(true);
+        incomplete.getStyleClass().add("metric-value");
         incomplete.setWrapText(true);
         latestLog.setWrapText(true);
         Button refresh = new Button("刷新 Dashboard");
+        refresh.setGraphic(Ui.icon("Dashboard"));
         refresh.setOnAction(event -> refresh());
+        Region headingSpace = new Region();
+        HBox heading = new HBox(12, title, headingSpace, refresh);
+        heading.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(headingSpace, Priority.ALWAYS);
         addLauncher("打开目录", () -> new ProjectDirectoryOpener().open(project));
         addLauncher("打开终端", () -> new ProjectTerminalOpener().open(project, appSettings.values().terminal()));
         addLauncher("打开 IDEA", () -> new ProjectIdeaOpener().open(project,
@@ -64,7 +75,6 @@ public final class DashboardView extends VBox {
                 .open(project, settings.requirePath(IdePathSettings.Ide.VS_CODE)));
         addLauncher("打开 Cursor", () -> new ProjectEditorOpener(ProjectEditorOpener.Editor.CURSOR)
                 .open(project, settings.requirePath(IdePathSettings.Ide.CURSOR)));
-        refresh.setGraphic(Ui.icon("Dashboard"));
         VBox overview = Ui.card("工作概览", projectCount, projectLabel, launchers);
         javafx.scene.layout.GridPane metrics = new javafx.scene.layout.GridPane();
         metrics.setHgap(16);
@@ -78,7 +88,7 @@ public final class DashboardView extends VBox {
         metrics.add(Ui.card("工作区", changes), 1, 0);
         metrics.add(Ui.card("最近提交", commit), 0, 1);
         metrics.add(Ui.card("待办事项", incomplete), 1, 1);
-        getChildren().addAll(title, refresh, overview, metrics, Ui.card("最近开发日志", latestLog));
+        getChildren().addAll(heading, metrics, overview, Ui.card("最近开发日志", latestLog));
         setProject(null);
     }
 
@@ -110,7 +120,8 @@ public final class DashboardView extends VBox {
             activeTask.cancel(true);
             activeTask = null;
         }
-        incomplete.setText(project == null ? "未完成 TODO：—" : "未完成 TODO：正在读取…");
+        incomplete.setTooltip(null);
+        incomplete.setText(project == null ? "—" : "正在读取…");
         if (project == null) return;
         Project selected = project;
         Task<Long> task = new Task<>() {
@@ -123,13 +134,15 @@ public final class DashboardView extends VBox {
         task.setOnSucceeded(event -> {
             if (activeTask != task) return;
             activeTask = null;
-            incomplete.setText("未完成 TODO：" + task.getValue() + " 项");
+            incomplete.setText(task.getValue() + " 项未完成");
         });
         task.setOnFailed(event -> {
             if (activeTask != task) return;
             activeTask = null;
-            incomplete.setText(HistoryConflictException.messageOr(task.getException(),
-                    "未完成 TODO：读取失败。请检查 TODO 文件、访问权限及磁盘状态，重新进入 Dashboard 可重试。"));
+            String message = HistoryConflictException.messageOr(task.getException(),
+                    "未完成 TODO：读取失败。请检查 TODO 文件、访问权限及磁盘状态，重新进入 Dashboard 可重试。");
+            incomplete.setText("读取失败");
+            incomplete.setTooltip(new Tooltip(message));
             System.getLogger(DashboardView.class.getName()).log(System.Logger.Level.WARNING,
                     "Dashboard TODO count loading failed", task.getException());
         });

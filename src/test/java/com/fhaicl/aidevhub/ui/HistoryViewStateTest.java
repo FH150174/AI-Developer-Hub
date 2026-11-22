@@ -25,12 +25,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
+import javafx.geometry.Orientation;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ListView;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -139,6 +142,8 @@ class HistoryViewStateTest {
         await(() -> list(view).getItems().size() == 1, "Notes 切换到 B");
         onFx(() -> {
             ListView<?> logs = list(view);
+            view.applyCss();
+            view.layout();
             assertNull(logs.getSelectionModel().getSelectedItem());
             assertEquals("", content(view).getText());
             assertEquals("当前项目：B\n路径：" + b.path(), projectLabel(view).getText());
@@ -153,11 +158,57 @@ class HistoryViewStateTest {
         });
         onFx(() -> {
             assertEquals(0, list(view).getItems().size());
-            assertEquals("", content(view).getText());
+            assertEquals("", contentText(view));
             assertEquals("当前项目：A\n路径：" + a.path(), projectLabel(view).getText());
             return null;
         });
         await(() -> placeholderText(view).contains("A 还没有开发日志。"), "Notes 切回空项目 A");
+    }
+
+    @Test void notesSplitPaneGivesBodyMoreSpaceAndKeepsTheSelectedLog() throws Exception {
+        Project a = project("a");
+        ProjectLogStore store = new ProjectLogStore(directory.resolve("notes"));
+        store.save(a, List.of(
+                new DevelopmentLog("长日志", "第一段正文\n\n第二段正文\n\n第三段正文"),
+                new DevelopmentLog("短日志", "短正文")));
+        AtomicReference<ProjectLogsView> reference = new AtomicReference<>();
+        onFx(() -> {
+            ProjectLogsView view = new ProjectLogsView(store, () -> { });
+            new Scene(view, 960, 640);
+            view.applyCss();
+            view.layout();
+            view.setProject(a);
+            reference.set(view);
+            return null;
+        });
+        ProjectLogsView view = reference.get();
+        await(() -> list(view).getItems().size() == 2, "Notes 加载两篇日志");
+
+        onFx(() -> {
+            ListView<?> logs = list(view);
+            logs.getSelectionModel().select(0);
+            view.applyCss();
+            view.layout();
+            SplitPane split = (SplitPane) view.lookup(".notes-split");
+            assertNotNull(split);
+            assertEquals(Orientation.VERTICAL, split.getOrientation());
+            assertEquals(0.34, split.getDividerPositions()[0], 0.01);
+            assertSame(logs, split.getItems().get(0));
+            assertTrue(split.getItems().get(1).getBoundsInLocal().getHeight()
+                    > logs.getBoundsInLocal().getHeight());
+            assertSame(logs.getItems().get(0), logs.getSelectionModel().getSelectedItem());
+            assertTrue(content(view).getText().contains("第一段正文"));
+
+            TabPane reading = (TabPane) view.lookupAll(".tab-pane").stream()
+                    .filter(TabPane.class::isInstance).findFirst().orElseThrow();
+            reading.getSelectionModel().select(1);
+            assertSame(logs.getItems().get(0), logs.getSelectionModel().getSelectedItem());
+
+            split.setDividerPositions(0.6);
+            view.layout();
+            assertSame(logs.getItems().get(0), logs.getSelectionModel().getSelectedItem());
+            return null;
+        });
     }
 
     @Test void todoGuideNoProjectThenEmptyProjectAndClearThePreviousProject() throws Exception {
@@ -447,6 +498,12 @@ class HistoryViewStateTest {
     private static TextArea content(Parent view) {
         return (TextArea) view.lookupAll("*").stream()
                 .filter(TextArea.class::isInstance).findFirst().orElseThrow();
+    }
+
+    private static String contentText(Parent view) {
+        return view.lookupAll("*").stream()
+                .filter(TextArea.class::isInstance).map(TextArea.class::cast)
+                .findFirst().map(TextArea::getText).orElse("");
     }
 
     private static List<Button> buttons(Parent root) {

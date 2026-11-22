@@ -8,7 +8,9 @@ import javafx.concurrent.Task;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
+import javafx.geometry.Orientation;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ButtonBar;
@@ -23,6 +25,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
@@ -45,6 +48,8 @@ public final class ProjectLogsView extends VBox {
     private final TextArea content = new TextArea();
     private final MarkdownPreview preview = new MarkdownPreview();
     private final TabPane reading = new TabPane();
+    private final SplitPane viewer = new SplitPane();
+    private final VBox readingBox = new VBox(8);
     private Project project;
     private Task<List<DevelopmentLog>> activeTask;
 
@@ -90,8 +95,16 @@ public final class ProjectLogsView extends VBox {
             logDate.setText(selected == null ? "日期：—"
                     : "日期：" + (selected.date() == null ? "未记录日期" : selected.date().toString()));
         });
-        VBox.setVgrow(logs, Priority.ALWAYS);
+        readingBox.getChildren().addAll(logDate, reading);
+        readingBox.setMinHeight(0);
         VBox.setVgrow(reading, Priority.ALWAYS);
+        logs.setMinHeight(0);
+        viewer.setOrientation(Orientation.VERTICAL);
+        viewer.getStyleClass().add("notes-split");
+        viewer.setMinHeight(0);
+        viewer.getItems().add(logs);
+        logs.getItems().addListener((ListChangeListener<DevelopmentLog>) change -> updateReadingPane());
+        VBox.setVgrow(viewer, Priority.ALWAYS);
         Button create = new Button("新建日志");
         create.getStyleClass().add("primary");
         create.setGraphic(Ui.icon("Notes"));
@@ -103,7 +116,7 @@ public final class ProjectLogsView extends VBox {
         create.setOnAction(event -> editLog(true));
         edit.setOnAction(event -> editLog(false));
         delete.setOnAction(event -> deleteLog());
-        getChildren().addAll(title, projectLabel, status, new HBox(12, create, edit, delete), logs, logDate, reading);
+        getChildren().addAll(title, projectLabel, status, new HBox(12, create, edit, delete), viewer);
         setProject(null);
     }
 
@@ -158,6 +171,23 @@ public final class ProjectLogsView extends VBox {
         Thread thread = new Thread(task, "project-logs-load");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    private void updateReadingPane() {
+        boolean hasLogs = !logs.getItems().isEmpty();
+        if (hasLogs) {
+            if (!viewer.getItems().contains(readingBox)) {
+                viewer.getItems().add(readingBox);
+                viewer.setDividerPositions(0.34);
+            }
+        } else {
+            if (viewer.getItems().contains(readingBox)) {
+                viewer.getItems().remove(readingBox);
+            }
+            content.clear();
+            preview.showMarkdown("");
+            logDate.setText("日期：—");
+        }
     }
 
     private void editLog(boolean creating) {

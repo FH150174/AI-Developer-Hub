@@ -43,6 +43,18 @@
 }
 .hub .card:hover { -fx-border-color: -hub-accent; }
 .hub .card-title { -fx-text-fill: -hub-muted; -fx-font-size: 12px; -fx-font-weight: bold; }
+.hub .metric-value { -fx-font-size: 18px; -fx-font-weight: bold; }
+.hub .metric-detail { -fx-text-fill: -hub-muted; -fx-font-size: 12px; }
+.hub .stats-explanation > .title, .hub .agent-context > .title {
+    -fx-background-color: transparent;
+    -fx-padding: 4 0 0 0;
+}
+.hub .stats-explanation > *.content, .hub .agent-context > *.content {
+    -fx-background-color: transparent;
+    -fx-padding: 6 0 0 0;
+}
+.hub .notes-split { -fx-background-color: transparent; -fx-padding: 0; }
+.hub .notes-split > .split-pane-divider { -fx-background-color: -hub-border; -fx-padding: 0; }
 .hub .tool-bar { -fx-background-color: -hub-surface; -fx-padding: 16 24; -fx-spacing: 14; }
 .hub .brand { -fx-font-weight: bold; -fx-font-size: 16px; }
 .hub .navigation { -fx-background-color: -hub-surface; -fx-padding: 16 10; -fx-border-width: 0 1 0 0; -fx-border-color: -hub-border; }
