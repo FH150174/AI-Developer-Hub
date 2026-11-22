@@ -12,7 +12,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TitledPane;
-import javafx.scene.control.Tooltip;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
@@ -45,7 +44,6 @@ public final class AgentsView extends VBox {
         title.getStyleClass().add("page-title");
         Label description = new Label("从当前项目目录打开独立窗口。可在 Settings 配置启动程序路径，留空则从 PATH 查找；WSL 使用默认发行版。CLI 登录及启动错误请查看打开的终端。");
         description.setWrapText(true);
-        currentProject.setWrapText(true);
         currentProject.setMinWidth(0);
         Label contextHelp = new Label("默认启动 Codex / Claude 时会收到读取上下文的首条提示；自定义命令自行决定参数。Antigravity / PowerShell / WSL 携带 AIDEVHUB_PROJECT_CONTEXT 环境变量，可复制下方上下文用于聊天。");
         contextHelp.setWrapText(true);
@@ -126,9 +124,7 @@ public final class AgentsView extends VBox {
         copyContext.setDisable(true);
         contextPreview.clear();
         if (project != null) loadContext(project);
-        currentProject.setText(project == null ? "未选择当前项目，请先在 Projects 中设为当前项目。"
-                : "当前项目：" + project.name() + "\n路径：" + project.path());
-        currentProject.setTooltip(project == null ? null : new Tooltip(currentProject.getText()));
+        Ui.showCurrentProject(currentProject, project, "未选择当前项目，请先在 Projects 中设为当前项目。");
         // A launch already requested keeps its captured project; its status belongs to that selection.
         activeTasks.clear();
         buttons.values().forEach(button -> button.setDisable(project == null));

@@ -27,7 +27,6 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
@@ -122,9 +121,7 @@ public final class ProjectLogsView extends VBox {
 
     public void setProject(Project project) {
         this.project = project;
-        projectLabel.setText(project == null ? "当前项目：—"
-                : "当前项目：" + project.name() + "\n路径：" + project.path());
-        projectLabel.setTooltip(project == null ? null : new Tooltip(projectLabel.getText()));
+        Ui.showCurrentProject(projectLabel, project, "当前项目：—");
         refresh();
     }
 
@@ -198,9 +195,8 @@ public final class ProjectLogsView extends VBox {
         List<DevelopmentLog> before = List.copyOf(logs.getItems());
         DevelopmentLog original = creating ? null : before.get(index);
         Dialog<Void> dialog = new Dialog<>();
-        Ui.dialog(dialog, this);
+        Ui.projectDialog(dialog, this, selectedProject);
         dialog.setTitle(creating ? "新建日志" : "编辑日志");
-        dialog.setHeaderText("项目：" + selectedProject.name());
         dialog.setResizable(true);
         TextField title = new TextField(original == null ? "" : original.title());
         DatePicker date = new DatePicker(creating ? LocalDate.now() : original.date());
@@ -208,18 +204,19 @@ public final class ProjectLogsView extends VBox {
         date.setPromptText("选择日期");
         TextArea body = new TextArea(original == null ? "" : original.content());
         body.setWrapText(true);
-        body.setPrefSize(600, 320);
         MarkdownPreview draftPreview = new MarkdownPreview();
         Tab editor = new Tab("普通文本 / Markdown 源码", body);
         Tab rendered = new Tab("Markdown 预览", draftPreview);
         TabPane editing = new TabPane(editor, rendered);
         editing.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        editing.setPrefSize(600, 320);
+        editing.setPrefSize(600, 240);
+        VBox.setVgrow(editing, Priority.ALWAYS);
         editing.getSelectionModel().selectedItemProperty().addListener((observable, beforeTab, selectedTab) -> {
             if (selectedTab == rendered) draftPreview.showMarkdown(body.getText());
         });
         Label error = new Label();
         error.setWrapText(true);
+        error.managedProperty().bind(error.textProperty().isNotEmpty());
         dialog.getDialogPane().setContent(new VBox(8, new Label("标题（必填）"), title,
                 new Label("日期"), date, new Label("内容"), editing, error));
         ButtonType save = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
@@ -259,9 +256,8 @@ public final class ProjectLogsView extends VBox {
         List<DevelopmentLog> before = List.copyOf(logs.getItems());
         Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
                 "确定删除日志“" + before.get(index).title() + "”？", ButtonType.OK, ButtonType.CANCEL);
-        Ui.dialog(confirmation, this);
+        Ui.projectDialog(confirmation, this, selectedProject);
         confirmation.setTitle("删除日志");
-        confirmation.setHeaderText("项目：" + selectedProject.name());
         if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
         try {
             List<DevelopmentLog> updated = service.delete(selectedProject, before, index);

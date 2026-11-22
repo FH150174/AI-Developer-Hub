@@ -43,9 +43,9 @@ class DashboardViewTest {
     }
 
     @Test void compactMetricsShowBranchChangesAndTodoWithinTheDefaultContentHeight() throws Exception {
-        Path repository = Files.createDirectories(directory.resolve("repo"));
+        Path repository = Files.createDirectories(directory.resolve("较长的项目路径".repeat(8)));
         assertEquals(0, new GitCommandExecutor().execute(repository, "init", "--initial-branch=main").exitCode());
-        Project project = new Project("Demo", repository);
+        Project project = new Project("长项目名".repeat(24), repository);
         ProjectTodoStore todoStore = new ProjectTodoStore(directory.resolve("todos"));
         todoStore.save(project, List.of(new TodoItem("一"), new TodoItem("二")));
         AtomicReference<DashboardView> reference = new AtomicReference<>();
@@ -79,6 +79,11 @@ class DashboardViewTest {
             assertEquals("暂无提交", commit.getText());
             Button refresh = control(view, Button.class, "刷新 Dashboard");
             assertSame(refresh.getParent(), control(view, Label.class, "Dashboard").getParent());
+            Label current = view.lookupAll(".label").stream().map(Label.class::cast)
+                    .filter(node -> node.isVisible() && node.getText().startsWith("当前项目：")).findFirst().orElseThrow();
+            assertEquals("当前项目：" + project.name() + "\n路径：" + repository, current.getTooltip().getText());
+            var refreshBounds = refresh.localToScene(refresh.getLayoutBounds());
+            assertTrue(refreshBounds.getMaxX() <= view.getScene().getWidth() && refreshBounds.getMinY() >= 0);
             javafx.scene.control.TitledPane explanation = assertInstanceOf(
                     javafx.scene.control.TitledPane.class, view.lookup(".stats-explanation"));
             assertEquals("统计说明", explanation.getText());

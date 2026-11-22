@@ -1,10 +1,13 @@
 package com.fhaicl.aidevhub.ui;
 
+import com.fhaicl.aidevhub.project.Project;
 import com.fhaicl.aidevhub.settings.AppSettings;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.SVGPath;
 
@@ -26,6 +29,31 @@ public final class Ui {
                     ? AppSettings.Theme.DARK : AppSettings.Theme.LIGHT);
         } else theme(dialog.getDialogPane(), AppSettings.Theme.LIGHT);
         dialog.getDialogPane().setMinWidth(420);
+    }
+
+    public static void projectDialog(Dialog<?> dialog, Node owner, Project project) {
+        dialog(dialog, owner);
+        Label header = new Label("项目：" + project.name());
+        header.getStyleClass().add("header-panel");
+        // Let the form and its buttons determine the opening width, even for very long names.
+        header.setPrefWidth(0);
+        header.setMinWidth(0);
+        header.setTooltip(fullTextTooltip(header.getText() + "\n路径：" + project.path()));
+        header.setContentDisplay(ContentDisplay.RIGHT);
+        header.graphicProperty().bind(dialog.graphicProperty());
+        dialog.getDialogPane().setHeader(header);
+    }
+
+    public static Tooltip fullTextTooltip(String text) {
+        Tooltip tooltip = new Tooltip(text);
+        tooltip.setMaxWidth(560);
+        tooltip.setWrapText(true);
+        return tooltip;
+    }
+
+    public static void showCurrentProject(Label label, Project project, String emptyMessage) {
+        label.setText(project == null ? emptyMessage : "当前项目：" + project.name() + "\n路径：" + project.path());
+        label.setTooltip(project == null ? null : fullTextTooltip(label.getText()));
     }
 
     public static VBox card(String heading, Node... content) {

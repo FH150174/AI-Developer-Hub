@@ -41,13 +41,16 @@
     -fx-padding: 20;
     -fx-spacing: 12;
 }
-.hub .card:hover { -fx-border-color: -hub-accent; }
 .hub .card-title { -fx-text-fill: -hub-muted; -fx-font-size: 12px; -fx-font-weight: bold; }
 .hub .metric-value { -fx-font-size: 18px; -fx-font-weight: bold; }
 .hub .metric-detail { -fx-text-fill: -hub-muted; -fx-font-size: 12px; }
 .hub .stats-explanation > .title, .hub .agent-context > .title {
     -fx-background-color: transparent;
     -fx-padding: 4 0 0 0;
+}
+.hub .stats-explanation > .title:hover, .hub .agent-context > .title:hover {
+    -fx-background-color: -hub-hover;
+    -fx-cursor: hand;
 }
 .hub .stats-explanation > *.content, .hub .agent-context > *.content {
     -fx-background-color: transparent;
@@ -74,6 +77,7 @@
 .hub .button:pressed, .hub .project-actions .menu-button:showing { -fx-background-color: -hub-selection; }
 .hub .button:focused, .hub .project-actions .menu-button:focused { -fx-border-color: -hub-accent; -fx-border-width: 2; -fx-padding: 7 13; }
 .hub .button:default, .hub .button.primary { -fx-background-color: -hub-accent; -fx-text-fill: -hub-background; -fx-font-weight: bold; }
+.hub .button:default:focused, .hub .button.primary:focused { -fx-background-insets: 3; }
 .hub .button:default:hover, .hub .button.primary:hover { -fx-background-color: -hub-selection; -fx-text-fill: -hub-text; }
 .hub .button:disabled, .hub .project-actions .menu-button:disabled { -fx-opacity: 0.42; -fx-cursor: default; }
 .hub .project-actions .menu-button > .label { -fx-padding: 0; }
@@ -95,7 +99,7 @@
 .hub .list-cell:filled:hover, .hub .table-row-cell:filled:hover { -fx-background-color: -hub-hover; }
 .hub .list-cell:filled:selected, .hub .table-row-cell:filled:selected { -fx-background-color: -hub-selection; -fx-text-fill: -hub-text; }
 .hub .table-cell { -fx-text-fill: -hub-text; -fx-padding: 10; -fx-border-color: transparent; }
-.hub .project-table:focused { -fx-border-color: -hub-accent; }
+.hub .list-view:focused, .hub .project-table:focused { -fx-border-color: -hub-accent; }
 .hub .table-cell.project-status { -fx-alignment: center; -fx-font-weight: bold; }
 .hub .table-view .column-header, .hub .table-view .filler { -fx-background-color: -hub-background; -fx-border-color: transparent; -fx-padding: 8; }
 .hub .scroll-pane, .hub .scroll-pane > .viewport { -fx-background-color: -hub-background; }

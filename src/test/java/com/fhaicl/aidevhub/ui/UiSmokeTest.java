@@ -11,11 +11,14 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import javafx.application.Platform;
+import javafx.css.PseudoClass;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.image.WritableImage;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import org.junit.jupiter.api.Test;
@@ -46,8 +49,8 @@ class UiSmokeTest {
         assertTrue(ready.await(15, TimeUnit.SECONDS));
         FutureTask<Void> check = new FutureTask<>(() -> {
             MainView root = new MainView(directory);
-            new Scene(root, 1100, 800);
-            root.resize(1100, 800);
+            new Scene(root, 960, 640);
+            root.resize(960, 640);
             for (AppSettings.Theme theme : AppSettings.Theme.values()) {
                 Ui.theme(root, theme);
                 root.applyCss();
@@ -57,6 +60,7 @@ class UiSmokeTest {
                 assertEquals(theme == AppSettings.Theme.DARK, text.getBrightness() > 0.8);
                 assertFalse(root.lookupAll(".card").isEmpty());
                 assertFalse(root.lookupAll(".hub-icon").isEmpty());
+                assertHoverIsLocalToDisclosure(root);
                 ToastHost host = (ToastHost) root.getProperties().get(ToastHost.class);
                 host.getChildren().getFirst().setOpacity(1);
                 snapshot(root, theme.name().toLowerCase() + "-dashboard");
@@ -140,7 +144,26 @@ class UiSmokeTest {
         check.get(45, TimeUnit.SECONDS);
     }
 
-    private static void snapshot(javafx.scene.Parent root, String name) throws Exception {
+    private static void assertHoverIsLocalToDisclosure(Parent root) {
+        Region card = root.lookupAll(".card").stream().map(Region.class::cast)
+                .filter(node -> node.lookup(".stats-explanation") != null).findFirst().orElseThrow();
+        Region title = (Region) card.lookup(".stats-explanation > .title");
+        var border = card.getBorder();
+        var background = card.getBackground();
+        var titleBackground = title.getBackground();
+        var hover = PseudoClass.getPseudoClass("hover");
+        card.pseudoClassStateChanged(hover, true);
+        title.pseudoClassStateChanged(hover, true);
+        root.applyCss();
+        assertEquals(border, card.getBorder(), "指标卡片的边框不应暗示整张卡片可点击");
+        assertEquals(background, card.getBackground());
+        assertNotEquals(titleBackground, title.getBackground(), "可展开的统计说明应有悬停反馈");
+        title.pseudoClassStateChanged(hover, false);
+        card.pseudoClassStateChanged(hover, false);
+        root.applyCss();
+    }
+
+    private static void snapshot(Parent root, String name) throws Exception {
         WritableImage image = root.snapshot(null, null);
         int width = (int) image.getWidth();
         int height = (int) image.getHeight();

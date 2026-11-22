@@ -26,7 +26,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Separator;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -85,7 +84,7 @@ public final class MainView extends BorderPane {
         ProjectListView projectsView = new ProjectListView(ideSettings, appSettings, dataDirectory.resolve("projects.xml"), project -> {
             refreshButton.setDisable(project == null);
             currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name());
-            currentProject.setTooltip(project == null ? null : new Tooltip(project.name() + "\n" + project.path()));
+            currentProject.setTooltip(project == null ? null : Ui.fullTextTooltip(project.name() + "\n" + project.path()));
             branchView.setProject(project);
             commitView.setProject(project);
             countView.setProject(project);

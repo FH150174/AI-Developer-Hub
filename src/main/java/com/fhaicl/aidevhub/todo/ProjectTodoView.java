@@ -19,7 +19,6 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
@@ -95,9 +94,7 @@ public final class ProjectTodoView extends VBox {
 
     public void setProject(Project project) {
         this.project = project;
-        projectLabel.setText(project == null ? "当前项目：—"
-                : "当前项目：" + project.name() + "\n路径：" + project.path());
-        projectLabel.setTooltip(project == null ? null : new Tooltip(projectLabel.getText()));
+        Ui.showCurrentProject(projectLabel, project, "当前项目：—");
         refresh();
     }
 
@@ -150,9 +147,8 @@ public final class ProjectTodoView extends VBox {
         Project selected = project;
         List<TodoItem> before = List.copyOf(snapshot);
         TextInputDialog dialog = new TextInputDialog();
-        Ui.dialog(dialog, this);
+        Ui.projectDialog(dialog, this, selected);
         dialog.setTitle("添加任务");
-        dialog.setHeaderText("项目：" + selected.name());
         dialog.setContentText("任务标题：");
         Label error = new Label();
         error.setWrapText(true);
@@ -183,9 +179,8 @@ public final class ProjectTodoView extends VBox {
         if (deleting) {
             Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
                     "确定删除任务“" + before.get(index).title() + "”？", ButtonType.OK, ButtonType.CANCEL);
-            Ui.dialog(confirmation, this);
+            Ui.projectDialog(confirmation, this, selected);
             confirmation.setTitle("删除任务");
-            confirmation.setHeaderText("项目：" + selected.name());
             if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
         }
         try {

@@ -20,10 +20,10 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextInputDialog;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -72,7 +72,7 @@ public final class ProjectListView extends VBox {
                 .otherwise(Ui.empty("还没有项目", "点击“添加项目”，选择一个本地开发目录开始。")));
         Label selectedLabel = new Label();
         selectedLabel.textProperty().bind(selectedItem.map(project -> "已选：" + project.name()).orElse("已选：无"));
-        selectedLabel.tooltipProperty().bind(selectedItem.map(project -> new Tooltip(project.name() + "\n" + project.path())));
+        selectedLabel.tooltipProperty().bind(selectedItem.map(project -> Ui.fullTextTooltip(project.name() + "\n" + project.path())));
         selectedLabel.setMaxWidth(200);
         Label storageStatus = new Label();
         storageStatus.textProperty().bind(reloadMessage);
@@ -117,6 +117,12 @@ public final class ProjectListView extends VBox {
         pathColumn.setPrefWidth(440);
         pathColumn.setCellValueFactory(cell ->
                 new ReadOnlyStringWrapper(cell.getValue().path().toString()));
+        pathColumn.setCellFactory(column -> {
+            TableCell<Project, String> cell = new TableCell<>();
+            cell.textProperty().bind(cell.itemProperty());
+            cell.tooltipProperty().bind(cell.itemProperty().map(Ui::fullTextTooltip));
+            return cell;
+        });
         table.getColumns().add(currentColumn);
         table.getColumns().add(nameColumn);
         table.getColumns().add(pathColumn);

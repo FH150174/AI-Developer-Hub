@@ -56,7 +56,7 @@ public final class DashboardView extends VBox {
         setMinWidth(0);
         Label title = new Label("Dashboard");
         title.getStyleClass().add("page-title");
-        projectLabel.setWrapText(true);
+        projectLabel.setMinWidth(0);
         incomplete.getStyleClass().add("metric-value");
         incomplete.setWrapText(true);
         latestLog.setWrapText(true);
@@ -94,8 +94,7 @@ public final class DashboardView extends VBox {
 
     public void setProject(Project project) {
         this.project = project;
-        projectLabel.setText(project == null ? "未选择当前项目，请先在 Projects 中设为当前项目。"
-                : "当前项目：" + project.name() + "\n路径：" + project.path());
+        Ui.showCurrentProject(projectLabel, project, "未选择当前项目，请先在 Projects 中设为当前项目。");
         launchers.setDisable(project == null);
         branch.setProject(project);
         commit.setProject(project);
