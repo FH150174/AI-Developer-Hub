@@ -49,7 +49,7 @@
 .hub .navigation .list-cell { -fx-padding: 14 12; -fx-background-radius: 8; -fx-graphic-text-gap: 14; }
 .hub .hub-icon { -fx-fill: transparent; -fx-stroke: -hub-muted; -fx-stroke-width: 1.6; -fx-stroke-line-cap: round; -fx-stroke-line-join: round; }
 .hub .list-cell:selected .hub-icon { -fx-stroke: -hub-accent; }
-.hub .button {
+.hub .button, .hub .project-actions .menu-button {
     -fx-background-color: -hub-surface;
     -fx-text-fill: -hub-text;
     -fx-border-color: -hub-border;
@@ -58,12 +58,15 @@
     -fx-padding: 8 14;
     -fx-cursor: hand;
 }
-.hub .button:hover { -fx-background-color: -hub-hover; -fx-border-color: -hub-accent; }
-.hub .button:pressed { -fx-background-color: -hub-selection; }
-.hub .button:focused { -fx-border-color: -hub-accent; -fx-border-width: 2; -fx-padding: 7 13; }
+.hub .button:hover, .hub .project-actions .menu-button:hover { -fx-background-color: -hub-hover; -fx-border-color: -hub-accent; }
+.hub .button:pressed, .hub .project-actions .menu-button:showing { -fx-background-color: -hub-selection; }
+.hub .button:focused, .hub .project-actions .menu-button:focused { -fx-border-color: -hub-accent; -fx-border-width: 2; -fx-padding: 7 13; }
 .hub .button:default, .hub .button.primary { -fx-background-color: -hub-accent; -fx-text-fill: -hub-background; -fx-font-weight: bold; }
 .hub .button:default:hover, .hub .button.primary:hover { -fx-background-color: -hub-selection; -fx-text-fill: -hub-text; }
-.hub .button:disabled { -fx-opacity: 0.42; -fx-cursor: default; }
+.hub .button:disabled, .hub .project-actions .menu-button:disabled { -fx-opacity: 0.42; -fx-cursor: default; }
+.hub .project-actions .menu-button > .label { -fx-padding: 0; }
+.hub .project-actions .menu-button > .arrow-button { -fx-padding: 0 0 0 8; }
+.hub .project-actions .context-menu { -fx-selection-bar: -hub-selection; -fx-focused-text-base-color: -hub-text; }
 .hub .text-field, .hub .text-area, .hub .combo-box, .hub .date-picker {
     -fx-background-color: -hub-surface;
     -fx-text-fill: -hub-text;
@@ -80,6 +83,8 @@
 .hub .list-cell:filled:hover, .hub .table-row-cell:filled:hover { -fx-background-color: -hub-hover; }
 .hub .list-cell:filled:selected, .hub .table-row-cell:filled:selected { -fx-background-color: -hub-selection; -fx-text-fill: -hub-text; }
 .hub .table-cell { -fx-text-fill: -hub-text; -fx-padding: 10; -fx-border-color: transparent; }
+.hub .project-table:focused { -fx-border-color: -hub-accent; }
+.hub .table-cell.project-status { -fx-alignment: center; -fx-font-weight: bold; }
 .hub .table-view .column-header, .hub .table-view .filler { -fx-background-color: -hub-background; -fx-border-color: transparent; -fx-padding: 8; }
 .hub .scroll-pane, .hub .scroll-pane > .viewport { -fx-background-color: -hub-background; }
 .hub .scroll-pane { -fx-border-color: transparent; -fx-padding: 0; }

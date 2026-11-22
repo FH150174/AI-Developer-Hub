@@ -26,6 +26,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Separator;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -60,6 +61,8 @@ public final class MainView extends BorderPane {
         ProjectTodoView todoView = new ProjectTodoView(todoStore);
         DashboardView dashboardView = new DashboardView(new ProjectTodoService(todoStore), logStore, ideSettings, appSettings);
         Label currentProject = new Label("未选择项目");
+        // ToolBar uses preferred width to decide which items disappear into its overflow menu.
+        currentProject.prefWidthProperty().bind(widthProperty().multiply(0.45));
         GitBranchView branchView = new GitBranchView();
         GitLatestCommitView commitView = new GitLatestCommitView();
         GitChangeCountView countView = new GitChangeCountView();
@@ -80,6 +83,7 @@ public final class MainView extends BorderPane {
         ProjectListView projectsView = new ProjectListView(ideSettings, appSettings, dataDirectory.resolve("projects.xml"), project -> {
             refreshButton.setDisable(project == null);
             currentProject.setText(project == null ? "未选择项目" : "当前项目：" + project.name());
+            currentProject.setTooltip(project == null ? null : new Tooltip(project.name() + "\n" + project.path()));
             branchView.setProject(project);
             commitView.setProject(project);
             countView.setProject(project);
