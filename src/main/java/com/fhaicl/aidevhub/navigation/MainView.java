@@ -53,12 +53,14 @@ public final class MainView extends BorderPane {
         AgentPathSettings agentSettings = new AgentPathSettings(
                 dataDirectory.resolve("agent-paths.xml"));
         settingsView.getChildren().add(new AgentSettingsView(agentSettings));
+        ListView<String> navigation = new ListView<>();
+        Runnable openProjects = () -> navigation.getSelectionModel().select("Projects");
         ProjectLogStore logStore = new ProjectLogStore(
                 dataDirectory.resolve("notes"));
-        ProjectLogsView notesView = new ProjectLogsView(logStore);
+        ProjectLogsView notesView = new ProjectLogsView(logStore, openProjects);
         ProjectTodoStore todoStore = new ProjectTodoStore(
                 dataDirectory.resolve("todos"));
-        ProjectTodoView todoView = new ProjectTodoView(todoStore);
+        ProjectTodoView todoView = new ProjectTodoView(todoStore, openProjects);
         DashboardView dashboardView = new DashboardView(new ProjectTodoService(todoStore), logStore, ideSettings, appSettings);
         Label currentProject = new Label("未选择项目");
         // ToolBar uses preferred width to decide which items disappear into its overflow menu.
@@ -117,7 +119,6 @@ public final class MainView extends BorderPane {
         com.fhaicl.aidevhub.ui.ToastHost contentHost = new com.fhaicl.aidevhub.ui.ToastHost();
         getProperties().put(com.fhaicl.aidevhub.ui.ToastHost.class, contentHost);
         setCenter(contentHost);
-        ListView<String> navigation = new ListView<>();
         navigation.getStyleClass().add("navigation");
         navigation.setCellFactory(list -> new javafx.scene.control.ListCell<>() {
             @Override protected void updateItem(String name, boolean empty) {

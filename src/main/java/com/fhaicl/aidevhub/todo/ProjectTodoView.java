@@ -1,9 +1,11 @@
 package com.fhaicl.aidevhub.todo;
 
+import com.fhaicl.aidevhub.ui.ProjectHistoryPlaceholder;
 import com.fhaicl.aidevhub.ui.Ui;
 import com.fhaicl.aidevhub.storage.HistoryConflictException;
 import com.fhaicl.aidevhub.project.Project;
 import javafx.concurrent.Task;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
@@ -17,6 +19,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
@@ -30,7 +33,7 @@ public final class ProjectTodoView extends VBox {
     private final BooleanProperty ready = new SimpleBooleanProperty(false);
     private final Label projectLabel = new Label();
     private final Label status = new Label();
-    private final Label emptyState = new Label("未选择当前项目");
+    private final ProjectHistoryPlaceholder placeholder;
     private final ListView<TodoItem> items = new ListView<>();
     private final ComboBox<TodoOrder> order = new ComboBox<>();
     private final ComboBox<TodoItem.Priority> newPriority = new ComboBox<>();
@@ -39,7 +42,7 @@ public final class ProjectTodoView extends VBox {
     private Project project;
     private Task<List<TodoItem>> activeTask;
 
-    public ProjectTodoView(ProjectTodoStore store) {
+    public ProjectTodoView(ProjectTodoStore store, Runnable openProjects) {
         super(12);
         this.store = Objects.requireNonNull(store);
         this.service = new ProjectTodoService(store);
@@ -47,11 +50,12 @@ public final class ProjectTodoView extends VBox {
         setMinWidth(0);
         Label title = new Label("TODO");
         title.getStyleClass().add("page-title");
-        projectLabel.setWrapText(true);
+        projectLabel.setMinWidth(0);
         status.setWrapText(true);
-        emptyState.setWrapText(true);
-        VBox placeholder = Ui.empty("待办清单", "在 Projects 选择当前项目，然后点击“添加任务”。");
-        placeholder.getChildren().add(emptyState);
+        status.visibleProperty().bind(status.textProperty().isNotEmpty());
+        status.managedProperty().bind(status.visibleProperty());
+        placeholder = new ProjectHistoryPlaceholder("待办", "点击“添加任务”，写下第一项任务吧。",
+                openProjects, this::refresh);
         items.setPlaceholder(placeholder);
         items.setEditable(false);
         items.setCellFactory(view -> new ListCell<>() {
@@ -81,6 +85,7 @@ public final class ProjectTodoView extends VBox {
         newPriority.disableProperty().bind(ready.not());
         order.getItems().setAll(TodoOrder.values());
         order.setValue(TodoOrder.PRIORITY);
+        order.disableProperty().bind(Bindings.isEmpty(items.getItems()));
         order.setOnAction(event -> render(snapshot, selectedSourceIndex()));
         getChildren().addAll(title, projectLabel, status,
                 new javafx.scene.layout.FlowPane(12, 12, new Label("新任务优先级："), newPriority, add, complete, delete, priority),
@@ -90,8 +95,9 @@ public final class ProjectTodoView extends VBox {
 
     public void setProject(Project project) {
         this.project = project;
-        projectLabel.setText(project == null ? "未选择当前项目，请先在 Projects 中设为当前项目。"
+        projectLabel.setText(project == null ? "当前项目：—"
                 : "当前项目：" + project.name() + "\n路径：" + project.path());
+        projectLabel.setTooltip(project == null ? null : new Tooltip(projectLabel.getText()));
         refresh();
     }
 
@@ -101,14 +107,17 @@ public final class ProjectTodoView extends VBox {
             activeTask.cancel(true);
             activeTask = null;
         }
+        items.getSelectionModel().clearSelection();
         snapshot = List.of();
         displayOrder = List.of();
         items.getItems().clear();
-        items.setDisable(project == null);
-        emptyState.setText(project == null ? "未选择当前项目" : "正在读取项目 TODO…");
         status.setText("");
-        if (project == null) return;
+        if (project == null) {
+            placeholder.noProject();
+            return;
+        }
         Project selected = project;
+        placeholder.loading(selected.name());
         Task<List<TodoItem>> task = new Task<>() {
             @Override
             protected List<TodoItem> call() throws IOException {
@@ -120,17 +129,14 @@ public final class ProjectTodoView extends VBox {
             if (activeTask != task) return;
             activeTask = null;
             render(task.getValue(), -1);
+            placeholder.empty(selected.name());
             ready.set(true);
-            emptyState.setText("当前项目暂无 TODO。");
-            status.setText("TODO：" + task.getValue().size() + " 项");
+            if (!task.getValue().isEmpty()) status.setText("TODO：" + task.getValue().size() + " 项");
         });
         task.setOnFailed(event -> {
             if (activeTask != task) return;
             activeTask = null;
-            items.setDisable(true);
-            emptyState.setText("TODO 读取失败");
-            status.setText(HistoryConflictException.messageOr(task.getException(),
-                    "项目 TODO 读取失败，请检查存储文件、访问权限及磁盘状态。重新进入 TODO 可重试。"));
+            placeholder.failed(task.getException());
             System.getLogger(ProjectTodoView.class.getName()).log(System.Logger.Level.WARNING,
                     "Project TODO loading failed", task.getException());
         });
@@ -196,7 +202,7 @@ public final class ProjectTodoView extends VBox {
     private void showSaved(List<TodoItem> updated, int index) {
         render(updated, index);
         Ui.toast(this, "TODO 已保存。");
-        status.setText("TODO 已保存：" + updated.size() + " 项");
+        status.setText(updated.isEmpty() ? "" : "TODO 已保存：" + updated.size() + " 项");
     }
 
     private int selectedSourceIndex() {

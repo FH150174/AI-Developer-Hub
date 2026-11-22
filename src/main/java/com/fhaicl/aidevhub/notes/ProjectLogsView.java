@@ -1,9 +1,11 @@
 package com.fhaicl.aidevhub.notes;
 
+import com.fhaicl.aidevhub.ui.ProjectHistoryPlaceholder;
 import com.fhaicl.aidevhub.ui.Ui;
 import com.fhaicl.aidevhub.storage.HistoryConflictException;
 import com.fhaicl.aidevhub.project.Project;
 import javafx.concurrent.Task;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
@@ -22,6 +24,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
@@ -37,6 +40,7 @@ public final class ProjectLogsView extends VBox {
     private final Label projectLabel = new Label();
     private final Label status = new Label();
     private final ListView<DevelopmentLog> logs = new ListView<>();
+    private final ProjectHistoryPlaceholder placeholder;
     private final Label logDate = new Label("日期：—");
     private final TextArea content = new TextArea();
     private final MarkdownPreview preview = new MarkdownPreview();
@@ -44,7 +48,7 @@ public final class ProjectLogsView extends VBox {
     private Project project;
     private Task<List<DevelopmentLog>> activeTask;
 
-    public ProjectLogsView(ProjectLogStore store) {
+    public ProjectLogsView(ProjectLogStore store, Runnable openProjects) {
         super(12);
         this.store = Objects.requireNonNull(store);
         this.service = new ProjectLogService(store);
@@ -52,9 +56,13 @@ public final class ProjectLogsView extends VBox {
         setMinWidth(0);
         Label title = new Label("Notes");
         title.getStyleClass().add("page-title");
-        projectLabel.setWrapText(true);
+        projectLabel.setMinWidth(0);
         status.setWrapText(true);
-        logs.setPlaceholder(Ui.empty("暂无开发日志", "先在 Projects 选择当前项目，再点击“新建日志”记录进展。"));
+        status.visibleProperty().bind(status.textProperty().isNotEmpty());
+        status.managedProperty().bind(status.visibleProperty());
+        placeholder = new ProjectHistoryPlaceholder("开发日志", "点击“新建日志”，记录今天的第一条进展吧。",
+                openProjects, this::refresh);
+        logs.setPlaceholder(placeholder);
         logs.setCellFactory(view -> new ListCell<>() {
             @Override
             protected void updateItem(DevelopmentLog log, boolean empty) {
@@ -69,6 +77,10 @@ public final class ProjectLogsView extends VBox {
         Tab markdown = new Tab("Markdown 预览", preview);
         reading.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         reading.getTabs().addAll(plain, markdown);
+        reading.visibleProperty().bind(Bindings.isNotEmpty(logs.getItems()));
+        reading.managedProperty().bind(reading.visibleProperty());
+        logDate.visibleProperty().bind(reading.visibleProperty());
+        logDate.managedProperty().bind(logDate.visibleProperty());
         reading.getSelectionModel().selectedItemProperty().addListener((observable, before, selected) -> {
             if (selected == markdown) preview.showMarkdown(content.getText());
         });
@@ -97,8 +109,9 @@ public final class ProjectLogsView extends VBox {
 
     public void setProject(Project project) {
         this.project = project;
-        projectLabel.setText(project == null ? "未选择当前项目，请先在 Projects 中设为当前项目。"
+        projectLabel.setText(project == null ? "当前项目：—"
                 : "当前项目：" + project.name() + "\n路径：" + project.path());
+        projectLabel.setTooltip(project == null ? null : new Tooltip(projectLabel.getText()));
         refresh();
     }
 
@@ -108,15 +121,18 @@ public final class ProjectLogsView extends VBox {
             activeTask.cancel(true);
             activeTask = null;
         }
+        logs.getSelectionModel().clearSelection();
         logs.getItems().clear();
         content.clear();
         preview.showMarkdown("");
-        logs.setDisable(project == null);
-        status.setText(project == null ? "" : "正在读取项目日志…");
+        logDate.setText("日期：—");
+        status.setText("");
         if (project == null) {
+            placeholder.noProject();
             return;
         }
         Project selected = project;
+        placeholder.loading(selected.name());
         Task<List<DevelopmentLog>> task = new Task<>() {
             @Override
             protected List<DevelopmentLog> call() throws IOException {
@@ -128,15 +144,14 @@ public final class ProjectLogsView extends VBox {
             if (activeTask != task) return;
             activeTask = null;
             logs.getItems().setAll(task.getValue());
+            placeholder.empty(selected.name());
             ready.set(true);
-            status.setText(task.getValue().isEmpty() ? "当前项目暂无开发日志。" : "开发日志：" + task.getValue().size() + " 条");
+            if (!task.getValue().isEmpty()) status.setText("开发日志：" + task.getValue().size() + " 条");
         });
         task.setOnFailed(event -> {
             if (activeTask != task) return;
             activeTask = null;
-            logs.setDisable(true);
-            status.setText(HistoryConflictException.messageOr(task.getException(),
-                    "项目日志读取失败，请检查日志文件内容、访问权限及磁盘状态。重新进入 Notes 可重试。"));
+            placeholder.failed(task.getException());
             System.getLogger(ProjectLogsView.class.getName()).log(System.Logger.Level.WARNING,
                     "Project log loading failed", task.getException());
         });
@@ -223,7 +238,7 @@ public final class ProjectLogsView extends VBox {
             logs.getItems().setAll(updated);
             if (!updated.isEmpty()) logs.getSelectionModel().select(Math.min(index, updated.size() - 1));
             Ui.toast(this, "日志已删除。");
-            status.setText(updated.isEmpty() ? "当前项目暂无开发日志。" : "日志已删除。开发日志：" + updated.size() + " 条");
+            status.setText(updated.isEmpty() ? "" : "日志已删除。开发日志：" + updated.size() + " 条");
         } catch (IOException | SecurityException exception) {
             status.setText(HistoryConflictException.messageOr(exception,
                     "删除失败，列表保持不变。请检查文件权限、磁盘状态或日志是否已变化。"));
