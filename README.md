@@ -7,7 +7,7 @@
 <p align="center">面向个人开发者的 Windows 桌面开发工作台</p>
 
 <p align="center">
-  <a href="https://github.com/FH150174/AI-Developer-Hub/releases/tag/v1.0"><img src="https://img.shields.io/badge/version-v1.0-4f7cff" alt="版本 v1.0"></a>
+  <a href="https://github.com/FH150174/AI-Developer-Hub/releases/tag/v2.0"><img src="https://img.shields.io/badge/version-v2.0-4f7cff" alt="版本 v2.0"></a>
   <img src="https://img.shields.io/badge/platform-Windows_x64-0078d4" alt="Windows x64">
   <img src="https://img.shields.io/badge/Java-21-ed8b00" alt="Java 21">
   <img src="https://img.shields.io/badge/JavaFX-21-5382a1" alt="JavaFX 21">
@@ -28,22 +28,28 @@
 
 ## 下载使用
 
-当前正式版本：**v1.0**（应用版本 `1.0.0`）。
+当前正式版本：**v2.0**（Windows x64，安装包版本 `2.0.0`）。
 
-**[下载 Windows 安装包](https://github.com/FH150174/AI-Developer-Hub/releases/download/v1.0/AI.Developer.Hub-1.0.0.exe)** · [版本说明与校验文件](https://github.com/FH150174/AI-Developer-Hub/releases/tag/v1.0)
+**[下载 Windows 安装包](https://github.com/FH150174/AI-Developer-Hub/releases/download/v2.0/AI.Developer.Hub-2.0.0.exe)** · [v2.0 发行说明](https://github.com/FH150174/AI-Developer-Hub/releases/tag/v2.0)
 
-1. 下载并运行 `AI.Developer.Hub-1.0.0.exe`，按向导安装。
+1. 下载并运行 `AI.Developer.Hub-2.0.0.exe`，按向导安装。
 2. 启动应用，在 **Projects** 中添加已有的本地项目目录。
 3. 选中项目，点击 **设为当前项目**。
 4. 在 **Dashboard** 查看概览，在 **Notes / TODO** 记录工作，在 **Settings** 配置常用工具。
 
 安装包附带 Java 21 运行时和 JavaFX，使用安装版无需额外安装 Java。Git、IDE、Agent CLI 等外部工具需要自行安装；Agent 的登录也由相应工具完成。
 
-如需校验下载文件，可将下面的 SHA-256 结果与 Release 中的 `SHA256SUMS.txt` 对照：
+如需在安装前校验下载文件，请在下载目录运行以下命令，并将输出与 [SHA256SUMS.txt](https://github.com/FH150174/AI-Developer-Hub/releases/download/v2.0/SHA256SUMS.txt) 对照：
 
 ```powershell
-Get-FileHash .\AI.Developer.Hub-1.0.0.exe -Algorithm SHA256
+Get-FileHash .\AI.Developer.Hub-2.0.0.exe -Algorithm SHA256
 ```
+
+### v2.0 更新要点
+
+- 修复多窗口操作时旧窗口可能覆盖项目列表的问题。
+- 改进 Windows 项目路径识别，让开发日志和 TODO 正确关联到对应项目；避免隐藏页面重复查询 Git 状态。
+- 修复长项目名的显示问题，改进 Dashboard、Notes 和 Agents 的布局，让键盘焦点与鼠标悬停更容易区分。
 
 ## 主要功能
 
@@ -62,7 +68,7 @@ Get-FileHash .\AI.Developer.Hub-1.0.0.exe -Algorithm SHA256
 
 ## 软件截图
 
-以下图片来自 **v1.0 Windows 应用的真实运行界面**，展示深色主题；日志和 TODO 使用隔离的演示数据。Dashboard 见上方，其余页面可展开查看。
+上方的 Dashboard 和下方的页面截图均来自 **v1.0 Windows 版**，使用深色主题和演示数据。v2.0 调整了部分布局，截图仅供参考。
 
 <details open>
 <summary><strong>Projects · 本地项目与工具入口</strong></summary>
@@ -159,13 +165,13 @@ mvn test
 生成 Windows 应用目录（附带运行时，无需 WiX）：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type app-image
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type app-image -AppVersion 2.0.0
 ```
 
 生成 `.exe` 安装包（另需 WiX 3.x）：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -AppVersion 2.0.0
 ```
 
 产物输出到 `target/dist/` 下的独立目录。分发应用目录时，需要携带整个应用文件夹。工具路径参数、启动验证以及安装、升级、卸载验收说明见 [Windows 打包指南](docs/PACKAGING.md)。
